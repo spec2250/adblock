@@ -14,6 +14,7 @@ import android.view.animation.OvershootInterpolator
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import android.widget.EditText
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -85,12 +86,61 @@ class MainActivity : AppCompatActivity() {
 
         toggleButton.setOnClickListener { if (!animating) runMotionAndToggle() }
         updateButton.setOnClickListener { onUpdate() }
+        findViewById<View>(R.id.whitelistButton).setOnClickListener { showWhitelistDialog() }
         findViewById<View>(R.id.themeButton).setOnClickListener {
             prefs.edit().putBoolean("light_theme", !light).apply()
             recreate()
         }
         startUiLoop()
         checkUpdate()
+    }
+
+    private fun showWhitelistDialog() {
+        val items = BlocklistManager.userWhitelist().toSortedSet().toList()
+        val display = items.toTypedArray()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.whitelist_title)
+            .setMessage(R.string.whitelist_hint)
+            .setItems(display) { _, which ->
+                val domain = items[which]
+                MaterialAlertDialogBuilder(this)
+                    .setTitle(domain)
+                    .setMessage("إزالة هذا النطاق من القائمة المسموحة؟")
+                    .setPositiveButton("إزالة") { _, _ ->
+                        BlocklistManager.unwhitelist(this, domain)
+                        Toast.makeText(this, R.string.whitelist_removed, Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("إلغاء", null)
+                    .show()
+            }
+            .setNeutralButton(R.string.whitelist_add) { _, _ -> showAddWhitelistDialog() }
+            .setPositiveButton("تم", null)
+            .show()
+    }
+
+    private fun showAddWhitelistDialog() {
+        val input = EditText(this).apply {
+            hint = "example.com"
+            singleLine = true
+            setTextColor(ContextCompat.getColor(this@MainActivity,
+                if (getSharedPreferences("adblocker", MODE_PRIVATE).getBoolean("light_theme", false))
+                    android.R.color.black else android.R.color.white))
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.whitelist_add)
+            .setMessage(R.string.whitelist_hint)
+            .setView(input)
+            .setPositiveButton("إضافة") { _, _ ->
+                val domain = input.text.toString().trim()
+                if (domain.contains('.') && domain.length > 3) {
+                    BlocklistManager.whitelist(this, domain)
+                    Toast.makeText(this, R.string.whitelist_added, Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "أدخل نطاقاً صحيحاً", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("إلغاء", null)
+            .show()
     }
 
     private fun checkUpdate() {

@@ -233,7 +233,10 @@ class AdBlockVpnService : VpnService() {
             } else if (domain != null && BlocklistManager.isBlocked(domain)) {
                 blockedCount = blockedCount + 1
                 lastBlockedDomain = domain
-                dnsResponse(payload, payloadLen, 3)
+                // Return NOERROR + 0.0.0.0 (Pi-hole style) instead of NXDOMAIN.
+                // Many apps treat NXDOMAIN as a fatal error and stop working;
+                // a 0.0.0.0 answer is handled gracefully by virtually all apps.
+                zeroResponse(payload, payloadLen)
             } else {
                 forwardQueryFast(payload, payloadLen) ?: dnsResponse(payload, payloadLen, 2)
             }.let { resp ->
@@ -258,6 +261,46 @@ class AdBlockVpnService : VpnService() {
         }
         flow.touch()
         flow.send(payload)
+    }
+
+    /**
+     * Build a proper DNS response: NOERROR with a single A record 0.0.0.0
+     * and a short TTL. The question section is copied from the query.
+     * This is what Pi-hole / AdGuard use so apps don't break.
+     */
+    private fun zeroResponse(query: ByteArray, len: Int): ByteArray {
+        if (len < 12) return query.copyOf(len)
+        val rd = query[2].toInt() and 0x01
+
+        // Find the end of the question section (skip the QNAME labels).
+        var q = 12
+        while (q < len) {
+            val l = query[q].toInt() and 0xFF
+            if (l == 0) { q++; break }
+            if (l and 0xC0 == 0xC0) { q += 2; break }
+            q += 1 + l
+        }
+        q += 4 // QTYPE + QCLASS
+        if (q > len) q = len
+
+        val answer = byteArrayOf(
+            0xC0.toByte(), 0x0C.toByte(), // NAME = pointer to question
+            0x00, 0x01,                   // TYPE = A
+            0x00, 0x01,                   // CLASS = IN
+            0x00, 0x00, 0x00, 0x1E,       // TTL = 30s
+            0x00, 0x04,                   // RDLENGTH = 4
+            0x00, 0x00, 0x00, 0x00        // RDATA = 0.0.0.0
+        )
+        val out = ByteArray(q + answer.size)
+        System.arraycopy(query, 0, out, 0, q)
+        System.arraycopy(answer, 0, out, q, answer.size)
+        out[2] = (0x80 or rd).toByte()       // QR=1, RD copied, no TC
+        out[3] = 0x80.toByte()               // RA=1, RCODE=0 (NOERROR)
+        // QDCOUNT: copied with the question section above (bytes 4-5).
+        out[6] = 0; out[7] = 1               // ANCOUNT = 1
+        out[8] = 0; out[9] = 0               // NSCOUNT = 0
+        out[10] = 0; out[11] = 0             // ARCOUNT = 0
+        return out
     }
 
     private fun dnsResponse(query: ByteArray, len: Int, rcode: Int): ByteArray {

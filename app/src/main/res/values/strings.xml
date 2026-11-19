@@ -19,5 +19,11 @@
     <string name="uptime">مدة التشغيل</string>
     <string name="list_size">نطاقات القائمة</string>
     <string name="theme">المظهر</string>
+    <string name="whitelist">النطاقات المسموحة</string>
+    <string name="whitelist_title">النطاقات المسموحة (لا تُحجب)</string>
+    <string name="whitelist_add">إضافة نطاق</string>
+    <string name="whitelist_hint">أضف نطاقاً إذا تعطل تطبيق ما بسبب الحجب</string>
+    <string name="whitelist_added">تمت الإضافة — سيُسمح بهذا النطاق</string>
+    <string name="whitelist_removed">تمت الإزالة</string>
     <string name="hint">تأكد من إيقاف Private DNS في إعدادات الهاتف</string>
 </resources>

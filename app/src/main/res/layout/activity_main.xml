@@ -211,9 +211,21 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginEnd="6dp"
+                android:layout_marginEnd="4dp"
                 android:text="@string/update_list"
-                android:textSize="12sp"
+                android:textSize="11sp"
+                app:cornerRadius="14dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/whitelistButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:text="@string/whitelist"
+                android:textSize="11sp"
+                style="@style/Widget.Material3.Button.TonalButton"
                 app:cornerRadius="14dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -221,9 +233,9 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="6dp"
+                android:layout_marginStart="4dp"
                 android:text="@string/theme"
-                android:textSize="12sp"
+                android:textSize="11sp"
                 style="@style/Widget.Material3.Button.TonalButton"
                 app:cornerRadius="14dp" />
         </LinearLayout>
