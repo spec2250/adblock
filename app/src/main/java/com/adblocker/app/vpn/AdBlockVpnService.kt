@@ -21,15 +21,12 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 
-/**
- * Local VPN that blocks ads by intercepting DNS, while transparently
- * forwarding ALL other traffic (TCP, UDP, ICMP) to the real network.
- * Non-DNS packets must never be dropped, otherwise the phone loses internet.
- */
 class AdBlockVpnService : VpnService() {
 
     private var tun: ParcelFileDescriptor? = null
@@ -41,6 +38,9 @@ class AdBlockVpnService : VpnService() {
 
     private val udpFlows = ConcurrentHashMap<String, UdpFlow>()
     private val tcpFlows = ConcurrentHashMap<String, TcpFlow>()
+
+    /** DNS cache: domain -> (response bytes, expiry time). TTL = 60 seconds. */
+    private val dnsCache = ConcurrentHashMap<String, Pair<ByteArray, Long>>()
 
     companion object {
         const val ACTION_START = "com.adblocker.app.START"
@@ -98,19 +98,14 @@ class AdBlockVpnService : VpnService() {
         builder.addAddress(VPN_ADDR, 24)
         builder.addDnsServer(VPN_DNS)
         builder.addRoute(VPN_DNS, 32)
-        // Only DNS is pulled into the VPN. Everything else keeps using the real
-        // network (split tunnel) so normal internet traffic is never touched.
+        // Only DNS enters the VPN; everything else uses the real network.
         builder.addRoute("8.8.8.8", 32)
         builder.addRoute("8.8.4.4", 32)
         builder.addRoute("1.1.1.1", 32)
         builder.addRoute("1.0.0.1", 32)
         builder.addRoute("9.9.9.9", 32)
-        // Let IPv6 fall through to the real network instead of being blocked.
         builder.allowFamily(OsConstants.AF_INET6)
         builder.setMtu(1500)
-        // CRITICAL: establish() is non-blocking by default, which makes read()
-        // return immediately and would kill the worker loop on the first idle
-        // moment. Blocking mode keeps the loop alive.
         builder.setBlocking(true)
         try {
             tun = builder.establish()
@@ -133,6 +128,7 @@ class AdBlockVpnService : VpnService() {
     private fun stopVpn() {
         running = false
         isRunning = false
+        dnsCache.clear()
         for (f in udpFlows.values) f.close()
         udpFlows.clear()
         for (f in tcpFlows.values) f.close()
@@ -159,6 +155,11 @@ class AdBlockVpnService : VpnService() {
             val deadTcp = ArrayList<String>()
             for (e in tcpFlows) if (now - e.value.lastUsed > 180_000L) deadTcp.add(e.key)
             for (k in deadTcp) tcpFlows.remove(k)?.close()
+
+            // Expire DNS cache entries older than 60 seconds.
+            val dead = ArrayList<String>()
+            for (e in dnsCache) if (now - e.value.second > 60_000L) dead.add(e.key)
+            for (k in dead) dnsCache.remove(k)
         }
     }
 
@@ -178,7 +179,6 @@ class AdBlockVpnService : VpnService() {
         output = null
     }
 
-    /** Inject a packet back into the VPN (reply coming from the network). */
     private fun inject(pkt: ByteArray) {
         val o = output ?: return
         synchronized(writeLock) {
@@ -193,7 +193,6 @@ class AdBlockVpnService : VpnService() {
         if (ihl < 20 || ihl > n) return
         val totalLen = u16(buf, 2)
         if (totalLen < ihl || totalLen > n) return
-        // Reassembled fragments only; fragmented packets are ignored.
         val frag = u16(buf, 6)
         if ((frag and 0x2000) != 0 || (frag and 0x1FFF) != 0) return
 
@@ -224,14 +223,27 @@ class AdBlockVpnService : VpnService() {
         val payload = buf.copyOfRange(payloadOff, payloadOff + payloadLen)
 
         if (dstPort == 53) {
-            val domain = DnsUtils.parseQueryDomain(payload, payloadLen)
-            val response = if (domain != null && BlocklistManager.isBlocked(domain)) {
+            val domain = DnsUtils.parseQueryDomain(payload, payloadLen) ?: return
+            val now = System.currentTimeMillis()
+
+            // 1. Check cache.
+            val cached = dnsCache[domain]
+            val response = if (cached != null && now - cached.second < 60_000L) {
+                cached.first
+            } else if (domain != null && BlocklistManager.isBlocked(domain)) {
                 blockedCount = blockedCount + 1
                 lastBlockedDomain = domain
                 dnsResponse(payload, payloadLen, 3)
             } else {
-                forwardQuery(payload, payloadLen) ?: dnsResponse(payload, payloadLen, 2)
+                forwardQueryFast(payload, payloadLen) ?: dnsResponse(payload, payloadLen, 2)
+            }.let { resp ->
+                // Cache successful responses (not NXDOMAIN/SERVFAIL) for 60s.
+                if (resp.size >= 12 && (resp[3].toInt() and 0x0F) != 3 && (resp[3].toInt() and 0x0F) != 2) {
+                    dnsCache[domain] = resp to now
+                }
+                resp
             }
+
             inject(buildUdpPacket(dstIp, srcIp, 53, srcPort, response))
             return
         }
@@ -267,14 +279,12 @@ class AdBlockVpnService : VpnService() {
             for (net in cm.allNetworks) {
                 val lp = cm.getLinkProperties(net) ?: continue
                 val servers = lp.dnsServers ?: continue
-                // Skip our own VPN network, otherwise we would forward queries
-                // straight back into ourselves and time out on every lookup.
                 var isOurs = false
                 for (d in servers) if (d.hostAddress == VPN_DNS) isOurs = true
                 if (isOurs) continue
                 for (d in servers) {
                     val h = d.hostAddress ?: continue
-                    if (h.indexOf(':') < 0) list.add(h)   // IPv4 only
+                    if (h.indexOf(':') < 0) list.add(h)
                 }
             }
         } catch (_: Exception) { }
@@ -282,26 +292,35 @@ class AdBlockVpnService : VpnService() {
         return list.distinct()
     }
 
-    private fun forwardQuery(query: ByteArray, len: Int): ByteArray? {
+    /** Query several upstream DNS servers in parallel and return the first valid answer. */
+    private fun forwardQueryFast(query: ByteArray, len: Int): ByteArray? {
         val qid = u16(query, 0)
-        for (upstream in upstreamDns()) {
-            var sock: DatagramSocket? = null
-            try {
-                sock = DatagramSocket()
-                protect(sock)
-                sock.soTimeout = 1500
-                val addr = InetAddress.getByName(upstream)
-                sock.send(DatagramPacket(query, len, addr, 53))
-                val rb = ByteArray(8192)
-                val rp = DatagramPacket(rb, rb.size)
-                sock.receive(rp)
-                if (rp.length >= 12 && u16(rb, 0) == qid) return rb.copyOf(rp.length)
-            } catch (_: Exception) {
-            } finally {
-                try { sock?.close() } catch (_: Exception) { }
-            }
+        val servers = upstreamDns()
+        val result = AtomicReference<ByteArray?>(null)
+        val latch = CountDownLatch(servers.size)
+        for (upstream in servers) {
+            Thread {
+                var sock: DatagramSocket? = null
+                try {
+                    sock = DatagramSocket()
+                    protect(sock)
+                    sock.soTimeout = 800
+                    val addr = InetAddress.getByName(upstream)
+                    sock.send(DatagramPacket(query, len, addr, 53))
+                    val rb = ByteArray(8192)
+                    val rp = DatagramPacket(rb, rb.size)
+                    sock.receive(rp)
+                    if (rp.length >= 12 && u16(rb, 0) == qid) {
+                        result.compareAndSet(null, rb.copyOf(rp.length))
+                    }
+                } catch (_: Exception) { } finally {
+                    try { sock?.close() } catch (_: Exception) { }
+                    latch.countDown()
+                }
+            }.start()
         }
-        return null
+        latch.await(2500, TimeUnit.MILLISECONDS)
+        return result.get()
     }
 
     // ---------------- UDP relay ----------------
@@ -444,8 +463,7 @@ class AdBlockVpnService : VpnService() {
                         break
                     }
                 }
-            } catch (_: Exception) {
-            }
+            } catch (_: Exception) { }
         }
 
         private fun readerLoop(s: Socket) {
@@ -469,8 +487,7 @@ class AdBlockVpnService : VpnService() {
                         off += len
                     }
                 }
-            } catch (_: Exception) {
-            } finally {
+            } catch (_: Exception) { } finally {
                 if (!closed && running) sendFin()
             }
         }
@@ -492,8 +509,6 @@ class AdBlockVpnService : VpnService() {
                     clientNext += data.size.toLong()
                     queue.offer(data)
                 }
-                // Always re-advertise the highest in-order byte we consumed, so a
-                // retransmission or a gap makes the client resend what we miss.
                 inject(buildTcpPacket(dstIp, srcIp, dstPort, srcPort,
                     serverSeq, clientNext, 0x10, EMPTY))
             }
