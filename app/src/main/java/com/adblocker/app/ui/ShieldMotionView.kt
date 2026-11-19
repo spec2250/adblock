@@ -7,7 +7,6 @@ import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
 import android.util.AttributeSet
@@ -37,7 +36,6 @@ class ShieldMotionView @JvmOverloads constructor(
 
     private var shieldShader: Shader? = null
     private var bgShader: Shader? = null
-    private var bubbleShader: Shader? = null
 
     private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val shieldPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -84,8 +82,6 @@ class ShieldMotionView @JvmOverloads constructor(
             Color.parseColor("#2E251C"), Color.parseColor("#0F0D0B"), Shader.TileMode.CLAMP)
         shieldShader = LinearGradient(cx, cy - r, cx, cy + r,
             Color.parseColor("#FFF4E9"), color, Shader.TileMode.CLAMP)
-        bubbleShader = RadialGradient(cx, cy, 0f, cx, cy, r * 2.4f,
-            Color.argb(110, 212, 165, 116), Color.argb(20, 212, 165, 116), Shader.TileMode.CLAMP)
     }
 
     fun play(enable: Boolean, onEnd: () -> Unit) {
@@ -129,9 +125,7 @@ class ShieldMotionView @JvmOverloads constructor(
 
         if (enabling) {
             // protection bubble (grows with the shield)
-            bubblePaint.shader = bubbleShader
-            bubblePaint.alpha = ((p / 0.5f).coerceIn(0f, 1f) * 255).toInt()
-            canvas.drawCircle(cx, cy, r * (1.0f + p * 1.5f), bubblePaint)
+            drawBubble(canvas, cx, cy, r * (1.0f + p * 1.5f), (p / 0.5f).coerceIn(0f, 1f))
             // expanding protection rings
             for (i in 0..2) {
                 val t = (p - i * 0.12f).coerceIn(0f, 1f)
@@ -155,9 +149,7 @@ class ShieldMotionView @JvmOverloads constructor(
             }
         } else {
             // bubble collapses inward then pops
-            bubblePaint.shader = bubbleShader
-            bubblePaint.alpha = ((1f - p) * 220).toInt()
-            canvas.drawCircle(cx, cy, r * (2.5f - p * 1.6f), bubblePaint)
+            drawBubble(canvas, cx, cy, r * (2.5f - p * 1.6f), (1f - p) * 0.86f)
             // collapsing rings
             for (i in 0..2) {
                 val t = (p - i * 0.1f).coerceIn(0f, 1f)
@@ -190,6 +182,17 @@ class ShieldMotionView @JvmOverloads constructor(
             val action = endAction
             endAction = null
             if (action != null) post { action() }
+        }
+    }
+
+    /** Soft glow bubble built from layered circles - no shader overload ambiguity. */
+    private fun drawBubble(canvas: Canvas, cx: Float, cy: Float, radius: Float, alpha: Float) {
+        if (alpha <= 0f || radius <= 0f) return
+        bubblePaint.shader = null
+        bubblePaint.color = color
+        for (i in 4 downTo 1) {
+            bubblePaint.alpha = (alpha * (18f + i * 16f)).toInt().coerceIn(0, 255)
+            canvas.drawCircle(cx, cy, radius * (i / 4f), bubblePaint)
         }
     }
 
