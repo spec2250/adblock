@@ -89,7 +89,7 @@ class ShieldMotionView @JvmOverloads constructor(
             Color.parseColor("#2E251C"), Color.parseColor("#0E0C0A"), Shader.TileMode.CLAMP)
         shieldShader = LinearGradient(cx - r * 0.6f, cy - r, cx + r * 0.6f, cy + r,
             Color.parseColor("#FFF6EA"), color, Shader.TileMode.CLAMP)
-        auraShader = RadialGradient(cx, cy, r * 0.3f, cx, cy, r * 1.9f,
+        auraShader = RadialGradient(cx, cy, r * 1.9f,
             intArrayOf(Color.argb(60, 212, 165, 116), Color.TRANSPARENT),
             floatArrayOf(0f, 1f), Shader.TileMode.CLAMP)
     }
@@ -213,7 +213,7 @@ class ShieldMotionView @JvmOverloads constructor(
                     val a = (i * 40 + 15) * Math.PI / 180.0
                     val d = r * (0.4f + burst * 2.4f)
                     drawShard(canvas, (cx + cos(a) * d).toFloat(), (cy + sin(a) * d).toFloat(),
-                        14f, a + burst * 2f, (1f - burst).coerceIn(0f, 1f))
+                        14f, (a + burst * 2f).toFloat(), (1f - burst).coerceIn(0f, 1f))
                 }
                 for (i in 0 until 8) {
                     val a = (i * 45) * Math.PI / 180.0

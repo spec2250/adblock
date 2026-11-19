@@ -121,7 +121,7 @@ class MainActivity : AppCompatActivity() {
     private fun showAddWhitelistDialog() {
         val input = EditText(this).apply {
             hint = "example.com"
-            singleLine = true
+            isSingleLine = true
             setTextColor(ContextCompat.getColor(this@MainActivity,
                 if (getSharedPreferences("adblocker", MODE_PRIVATE).getBoolean("light_theme", false))
                     android.R.color.black else android.R.color.white))
