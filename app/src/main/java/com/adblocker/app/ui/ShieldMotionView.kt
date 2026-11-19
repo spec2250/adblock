@@ -85,8 +85,7 @@ class ShieldMotionView @JvmOverloads constructor(
         shieldShader = LinearGradient(cx, cy - r, cx, cy + r,
             Color.parseColor("#FFF4E9"), color, Shader.TileMode.CLAMP)
         bubbleShader = RadialGradient(cx, cy, 0f, cx, cy, r * 2.4f,
-            intArrayOf(Color.argb(110, 212, 165, 116), Color.argb(35, 212, 165, 116), Color.TRANSPARENT),
-            floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP)
+            Color.argb(110, 212, 165, 116), Color.argb(20, 212, 165, 116), Shader.TileMode.CLAMP)
     }
 
     fun play(enable: Boolean, onEnd: () -> Unit) {
@@ -119,7 +118,7 @@ class ShieldMotionView @JvmOverloads constructor(
         canvas.drawRoundRect(RectF(pad, pad, w - pad, h - pad), r * 0.42f, r * 0.42f, bgPaint)
 
         // dotted orbit (icon style)
-        val orbitAlpha = (0.35f + 0.25f * sin(p * Math.PI)).coerceIn(0f, 1f)
+        val orbitAlpha = (0.35f + 0.25f * sin(p * Math.PI.toFloat())).coerceIn(0f, 1f)
         for (i in 0 until 24) {
             val a = (i * 15) * Math.PI / 180.0
             val d = r * 1.62f
@@ -208,7 +207,7 @@ class ShieldMotionView @JvmOverloads constructor(
         // inner highlight
         val hl = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
-            alpha = (alpha * 55).toInt()
+            this.alpha = (alpha * 55).toInt()
             style = Paint.Style.FILL
         }
         canvas.drawOval(cx - r * 0.52f, cy - r * 0.72f, cx + r * 0.52f, cy - r * 0.18f, hl)
@@ -262,8 +261,8 @@ class ShieldMotionView @JvmOverloads constructor(
         shardPaint.alpha = (alpha * 230).toInt()
         val p = Path()
         p.moveTo(x + cos(angle) * size, y + sin(angle) * size)
-        p.lineTo(x + cos(angle + 2.4) * size, y + sin(angle + 2.4) * size)
-        p.lineTo(x + cos(angle - 2.4) * size, y + sin(angle - 2.4) * size)
+        p.lineTo(x + cos(angle + 2.4f) * size, y + sin(angle + 2.4f) * size)
+        p.lineTo(x + cos(angle - 2.4f) * size, y + sin(angle - 2.4f) * size)
         p.close()
         canvas.drawPath(p, shardPaint)
     }
