@@ -4,6 +4,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,9 +21,22 @@ jobs:
         with:
           gradle-version: 8.2
       - name: Build debug APK
-        run: gradle assembleDebug --no-daemon
+        run: gradle assembleDebug -PbuildNumber=${{ github.run_number }} --no-daemon
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/*.apk
+      - name: Package APK as ZIP
+        run: cd app/build/outputs/apk/debug && zip -j app-debug.zip *.apk
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: AdBlocker v${{ github.run_number }}
+          body: |
+            تحسينات في الواجهة والحركة (Motion Graphics) والأداء.
+            نظام تحديث تلقائي داخل التطبيق.
+          files: app/build/outputs/apk/debug/app-debug.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
