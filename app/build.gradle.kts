@@ -11,8 +11,9 @@ android {
         applicationId = "com.adblocker.app"
         minSdk = 21
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        val buildNumber = (project.findProperty("buildNumber") as? String)?.toIntOrNull() ?: 1
+        versionCode = buildNumber
+        versionName = "1.$buildNumber"
     }
 
     buildTypes {

@@ -1,16 +1,23 @@
 <resources>
     <string name="app_name">AdBlocker</string>
+    <string name="tagline">حظر إعلانات التطبيقات • بدون تجذير</string>
     <string name="status_off">متوقف</string>
-    <string name="status_on">نشط</string>
-    <string name="toggle_on">تشغيل</string>
-    <string name="toggle_off">إيقاف</string>
-    <string name="blocked_count">إعلانات محظورة: %d</string>
+    <string name="status_on">الحماية فعّالة</string>
+    <string name="toggle_on">تشغيل الحماية</string>
+    <string name="toggle_off">إيقاف الحماية</string>
+    <string name="blocked_count">عدد الإعلانات المحظورة</string>
     <string name="mode_root">وضع Root</string>
     <string name="mode_vpn">وضع VPN</string>
     <string name="update_list">تحديث القائمة</string>
     <string name="updating">جارٍ التحديث…</string>
-    <string name="update_ok">تم التحديث</string>
-    <string name="update_fail">فشل التحديث (استخدام المخزن)</string>
+    <string name="update_ok">تم تحديث القائمة</string>
+    <string name="update_fail">فشل التحديث — استخدام المخزن</string>
     <string name="vpn_permission_needed">يجب منح صلاحية VPN</string>
-    <string name="root_not_available">Root غير متاح</string>
+    <string name="root_not_available">Root غير متاح — سيُستخدم VPN</string>
+    <string name="last_blocked">آخر نطاق محظور</string>
+    <string name="waiting">في انتظار أول إعلان…</string>
+    <string name="uptime">مدة التشغيل</string>
+    <string name="list_size">نطاقات القائمة</string>
+    <string name="theme">المظهر</string>
+    <string name="hint">تأكد من إيقاف Private DNS في إعدادات الهاتف</string>
 </resources>

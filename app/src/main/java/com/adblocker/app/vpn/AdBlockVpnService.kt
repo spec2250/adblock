@@ -30,11 +30,12 @@ class AdBlockVpnService : VpnService() {
         const val CHANNEL_ID = "adblocker_vpn"
         var blockedCount: Long = 0L
         var isRunning: Boolean = false
+        @Volatile var lastBlockedDomain: String = ""
+        var startedAt: Long = 0L
     }
 
     override fun onCreate() {
         super.onCreate()
-        BlocklistManager.load(this)
         createChannel()
     }
 
@@ -66,9 +67,16 @@ class AdBlockVpnService : VpnService() {
         if (running) return
         val builder = Builder()
         builder.setSession("AdBlocker")
+        // Virtual DNS server must be a *different* address from the VPN interface,
+        // otherwise packets never reach the tun fd (they are handled locally).
         builder.addAddress("10.0.0.2", 24)
-        builder.addRoute("10.0.0.2", 32)
-        builder.addDnsServer("10.0.0.2")
+        builder.addRoute("10.0.0.3", 32)
+        builder.addDnsServer("10.0.0.3")
+        // Also intercept common hard-coded DNS servers used by some apps.
+        builder.addRoute("8.8.8.8", 32)
+        builder.addRoute("8.8.4.4", 32)
+        builder.addRoute("1.1.1.1", 32)
+        builder.addRoute("9.9.9.9", 32)
         builder.setMtu(1500)
         try {
             tun = builder.establish()
@@ -79,6 +87,7 @@ class AdBlockVpnService : VpnService() {
         if (tun == null) return
         running = true
         isRunning = true
+        startedAt = System.currentTimeMillis()
         startForeground(1, buildNotification())
         worker = Thread { runLoop() }
         worker?.start()
@@ -97,6 +106,7 @@ class AdBlockVpnService : VpnService() {
 
     private fun runLoop() {
         val fd = tun ?: return
+        if (!BlocklistManager.isLoaded()) BlocklistManager.load(this)
         val input = FileInputStream(fd.fileDescriptor)
         val output = FileOutputStream(fd.fileDescriptor)
         val buf = ByteArray(32767)
@@ -135,6 +145,7 @@ class AdBlockVpnService : VpnService() {
 
         val responseDns: ByteArray = if (domain != null && BlocklistManager.isBlocked(domain)) {
             blockedCount++
+            lastBlockedDomain = domain
             DnsUtils.buildNxDomain(query, dnsLen)
         } else {
             // forward

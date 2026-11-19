@@ -4,6 +4,7 @@ import android.content.Context
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
 
 object BlocklistManager {
     private const val PREFS = "adblocker"
@@ -12,7 +13,9 @@ object BlocklistManager {
         "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
     private const val FILE_NAME = "blocklist.txt"
 
-    private val blocked = HashSet<String>()
+    // Volatile reference so the VPN worker thread always sees the latest list.
+    @Volatile
+    private var blocked: Set<String> = emptySet()
 
     fun url(context: Context): String =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -24,60 +27,53 @@ object BlocklistManager {
     }
 
     fun load(context: Context) {
-        blocked.clear()
-        // bundled asset
+        val set = ConcurrentHashMap.newKeySet<String>()
         try {
-            context.assets.open("blocklist.txt").bufferedReader().use { parse(it.readText()) }
-        } catch (_: Exception) {
-        }
-        // downloaded
+            context.assets.open("blocklist.txt").bufferedReader().use { parse(it.readText(), set) }
+        } catch (_: Exception) { }
         val f = File(context.filesDir, FILE_NAME)
         if (f.exists()) {
-            try { parse(f.readText()) } catch (_: Exception) { }
+            try { parse(f.readText(), set) } catch (_: Exception) { }
         }
-        // always block a small built-in set
         listOf("doubleclick.net", "googleadservices.com", "googlesyndication.com",
-            "adservice.google.com", "pagead2.googlesyndication.com").forEach { blocked.add(it) }
+            "adservice.google.com", "pagead2.googlesyndication.com").forEach { set.add(it) }
+        blocked = set
     }
 
+    fun isLoaded(): Boolean = blocked.isNotEmpty()
     fun size(): Int = blocked.size
 
     fun isBlocked(host: String): Boolean {
         val h = host.trimEnd('.').lowercase()
-        if (h in blocked) return true
-        // subdomain check
+        val list = blocked
+        if (h in list) return true
         var idx = h.indexOf('.')
         while (idx >= 0 && idx < h.length - 1) {
-            if (h.substring(idx + 1) in blocked) return true
+            if (h.substring(idx + 1) in list) return true
             idx = h.indexOf('.', idx + 1)
         }
         return false
     }
 
-    private fun parse(text: String) {
+    private fun parse(text: String, set: MutableSet<String>) {
         for (line in text.lineSequence()) {
             val t = line.trim()
             if (t.isEmpty() || t.startsWith("#")) continue
-            // hosts format: "0.0.0.0 domain" or "127.0.0.1 domain"
             val parts = t.split(Regex("\\s+"))
             if (parts.size >= 2) {
                 val ip = parts[0]
                 if (ip == "0.0.0.0" || ip == "127.0.0.1") {
                     for (i in 1 until parts.size) {
                         val d = parts[i].lowercase()
-                        if (d != "localhost" && d.contains('.')) blocked.add(d)
+                        if (d != "localhost" && d.contains('.')) set.add(d)
                     }
                     continue
                 }
             }
-            // domain-only lines
-            if (!t.contains(" ") && t.contains('.')) {
-                blocked.add(t.lowercase())
-            }
+            if (!t.contains(" ") && t.contains('.')) set.add(t.lowercase())
         }
     }
 
-    /** Returns true on success. */
     fun update(context: Context): Boolean {
         return try {
             val conn = URL(url(context)).openConnection() as HttpURLConnection
