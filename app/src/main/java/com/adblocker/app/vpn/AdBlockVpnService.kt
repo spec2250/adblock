@@ -97,8 +97,8 @@ class AdBlockVpnService : VpnService() {
 
     private fun runLoop() {
         val fd = tun ?: return
-        val input = FileInputStream(fd)
-        val output = FileOutputStream(fd)
+        val input = FileInputStream(fd.fileDescriptor)
+        val output = FileOutputStream(fd.fileDescriptor)
         val buf = ByteArray(32767)
         while (running) {
             val n = try { input.read(buf) } catch (_: Exception) { -1 }
