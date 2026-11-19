@@ -3,11 +3,7 @@ package com.adblocker.app
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.app.Activity
-import android.app.DownloadManager
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.graphics.drawable.GradientDrawable
 import android.net.VpnService
 import android.os.Bundle
@@ -119,21 +115,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startDownload(url: String) {
-        val id = UpdateManager.download(this, url)
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                if (intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L) == id) {
-                    unregisterReceiver(this)
-                    UpdateManager.install(context)
+        Toast.makeText(this, "جاري تنزيل التحديث…", Toast.LENGTH_SHORT).show()
+        UpdateManager.downloadAndInstall(this, url, object : UpdateManager.Listener {
+            override fun post(block: () -> Unit) {
+                runOnUiThread { block() }
+            }
+
+            override fun onProgress(percent: Int) {
+                if (percent == 0 || percent == 100 || percent % 20 == 0) {
+                    Toast.makeText(this@MainActivity, "تنزيل التحديث… $percent%", Toast.LENGTH_SHORT).show()
                 }
             }
-        }
-        val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
-            registerReceiver(receiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(receiver, filter)
-        }
+
+            override fun onInstalled() {
+                Toast.makeText(
+                    this@MainActivity,
+                    "جاري فتح نافذة التثبيت…",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+
+            override fun onError(message: String) {
+                Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+            }
+        })
     }
 
     private fun animateClick() {

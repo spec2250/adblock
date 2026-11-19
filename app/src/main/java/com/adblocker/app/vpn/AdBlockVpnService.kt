@@ -96,12 +96,22 @@ class AdBlockVpnService : VpnService() {
         val builder = Builder()
         builder.setSession("AdBlocker")
         builder.addAddress(VPN_ADDR, 24)
-        builder.addRoute("0.0.0.0", 0)
         builder.addDnsServer(VPN_DNS)
         builder.addRoute(VPN_DNS, 32)
+        // Only DNS is pulled into the VPN. Everything else keeps using the real
+        // network (split tunnel) so normal internet traffic is never touched.
+        builder.addRoute("8.8.8.8", 32)
+        builder.addRoute("8.8.4.4", 32)
+        builder.addRoute("1.1.1.1", 32)
+        builder.addRoute("1.0.0.1", 32)
+        builder.addRoute("9.9.9.9", 32)
         // Let IPv6 fall through to the real network instead of being blocked.
         builder.allowFamily(OsConstants.AF_INET6)
         builder.setMtu(1500)
+        // CRITICAL: establish() is non-blocking by default, which makes read()
+        // return immediately and would kill the worker loop on the first idle
+        // moment. Blocking mode keeps the loop alive.
+        builder.setBlocking(true)
         try {
             tun = builder.establish()
         } catch (_: Exception) {
@@ -253,15 +263,23 @@ class AdBlockVpnService : VpnService() {
     private fun upstreamDns(): List<String> {
         val list = ArrayList<String>()
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-                cm.activeNetwork?.let { net ->
-                    cm.getLinkProperties(net)?.dnsServers?.forEach { list.add(it.hostAddress ?: "") }
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            for (net in cm.allNetworks) {
+                val lp = cm.getLinkProperties(net) ?: continue
+                val servers = lp.dnsServers ?: continue
+                // Skip our own VPN network, otherwise we would forward queries
+                // straight back into ourselves and time out on every lookup.
+                var isOurs = false
+                for (d in servers) if (d.hostAddress == VPN_DNS) isOurs = true
+                if (isOurs) continue
+                for (d in servers) {
+                    val h = d.hostAddress ?: continue
+                    if (h.indexOf(':') < 0) list.add(h)   // IPv4 only
                 }
             }
         } catch (_: Exception) { }
-        list.addAll(listOf("1.1.1.1", "8.8.8.8", "9.9.9.9", "208.67.222.222"))
-        return list.map { it.trim() }.filter { it.contains('.') }.distinct()
+        list.addAll(listOf("1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4", "9.9.9.9", "208.67.222.222"))
+        return list.distinct()
     }
 
     private fun forwardQuery(query: ByteArray, len: Int): ByteArray? {
@@ -271,7 +289,7 @@ class AdBlockVpnService : VpnService() {
             try {
                 sock = DatagramSocket()
                 protect(sock)
-                sock.soTimeout = 2500
+                sock.soTimeout = 1500
                 val addr = InetAddress.getByName(upstream)
                 sock.send(DatagramPacket(query, len, addr, 53))
                 val rb = ByteArray(8192)
@@ -470,10 +488,15 @@ class AdBlockVpnService : VpnService() {
 
         fun offer(data: ByteArray, seq: Long) {
             synchronized(this) {
-                if (seq != clientNext) return
-                clientNext += data.size.toLong()
+                if (seq == clientNext && queue.size < 1024) {
+                    clientNext += data.size.toLong()
+                    queue.offer(data)
+                }
+                // Always re-advertise the highest in-order byte we consumed, so a
+                // retransmission or a gap makes the client resend what we miss.
+                inject(buildTcpPacket(dstIp, srcIp, dstPort, srcPort,
+                    serverSeq, clientNext, 0x10, EMPTY))
             }
-            if (queue.size < 1024) queue.offer(data)
         }
 
         fun sendAck() {

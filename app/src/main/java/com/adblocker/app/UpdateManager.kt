@@ -1,12 +1,9 @@
 package com.adblocker.app
 
-import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import android.os.Environment
+import android.widget.Toast
 import androidx.core.content.FileProvider
-import com.adblocker.app.BuildConfig
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
@@ -15,6 +12,17 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.zip.ZipInputStream
 
+/**
+ * Self-update flow.
+ *
+ * The file is downloaded into the app's OWN private storage with a plain
+ * HttpURLConnection, then un-zipped (Release assets are ZIPs) and handed to
+ * the system installer through the FileProvider.
+ *
+ * The previous version used DownloadManager + setDestinationInExternalPublicDir,
+ * which under scoped storage cannot be read back by the app, so install()
+ * found nothing and silently returned — the "pressing update does nothing" bug.
+ */
 object UpdateManager {
     private const val REPO = "spec2250/adblock"
     private const val API = "https://api.github.com/repos/$REPO/releases/latest"
@@ -22,6 +30,18 @@ object UpdateManager {
     const val ZIP_NAME = "adblocker-update.zip"
 
     data class Release(val code: Int, val name: String, val notes: String, val apkUrl: String?)
+
+    /** Human readable progress/status for the UI (all callbacks run on the main thread). */
+    interface Listener {
+        /** Runs [block] on the main thread. */
+        fun post(block: () -> Unit)
+        fun onProgress(percent: Int)
+        fun onInstalled()
+        fun onError(message: String)
+    }
+
+    @Volatile
+    private var busy = false
 
     fun check(): Release? {
         return try {
@@ -58,37 +78,89 @@ object UpdateManager {
         }
     }
 
-    fun download(context: Context, url: String): Long {
-        val fileName = if (url.substringBefore("?").endsWith(".zip")) ZIP_NAME else APK_NAME
-        val request = DownloadManager.Request(Uri.parse(url)).apply {
-            setTitle("AdBlocker update")
-            setDescription("Downloading new version…")
-            setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-            setAllowedOverMetered(true)
-            setAllowedOverRoaming(true)
+    /**
+     * Downloads the release into private storage, extracts the APK if needed
+     * and launches the installer. Always calls back on the main thread.
+     */
+    fun downloadAndInstall(context: Context, url: String, listener: Listener) {
+        if (busy) {
+            listener.onError("يوجد تحديث قيد التحميل بالفعل")
+            return
         }
-        val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        return dm.enqueue(request)
+        busy = true
+        val appContext = context.applicationContext
+        Thread {
+            try {
+                val isZip = url.substringBefore("?").endsWith(".zip", ignoreCase = true)
+                val dir = File(appContext.filesDir, "update").apply { mkdirs() }
+                val raw = File(dir, if (isZip) ZIP_NAME else APK_NAME)
+
+                listener.post { listener.onProgress(0) }
+                downloadFile(url, raw) { pct -> listener.post { listener.onProgress(pct) } }
+
+                val apk = if (isZip) {
+                    val out = File(dir, APK_NAME)
+                    if (out.exists()) out.delete()
+                    extractApk(raw, out)
+                    raw.delete()
+                    out
+                } else {
+                    raw
+                }
+
+                if (!apk.exists() || apk.length() < 1024) {
+                    listener.post { listener.onError("فشل التنزيل: الملف غير صالح") }
+                    return@Thread
+                }
+
+                listener.post { listener.onInstalled() }
+                // startActivity must run on the main thread.
+                listener.post { install(context, apk) }
+            } catch (e: Exception) {
+                listener.post {
+                    listener.onError("فشل التحديث: ${e.message ?: "خطأ غير معروف"}")
+                }
+            } finally {
+                busy = false
+            }
+        }.start()
     }
 
-    /** Extracts APK from the downloaded ZIP if needed, then opens installer. */
-    fun install(context: Context) {
-        val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        val apkFile = File(dir, APK_NAME)
-        val zipFile = File(dir, ZIP_NAME)
-        if (!apkFile.exists() && zipFile.exists()) {
-            try { extractApk(zipFile, apkFile); zipFile.delete() }
-            catch (_: Exception) { return }
+    private fun downloadFile(url: String, dest: File, onProgress: (Int) -> Unit) {
+        var conn: HttpURLConnection? = null
+        try {
+            conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 20000
+                readTimeout = 30000
+                instanceFollowRedirects = true
+                setRequestProperty("User-Agent", "AdBlocker")
+            }
+            val code = conn.responseCode
+            if (code !in 200..299) throw IllegalStateException("HTTP $code")
+            val total = conn.contentLength.toLong()
+            conn.inputStream.use { input ->
+                FileOutputStream(dest).use { out ->
+                    val buf = ByteArray(64 * 1024)
+                    var read: Int
+                    var sum = 0L
+                    var lastPct = -1
+                    while (input.read(buf).also { read = it } > 0) {
+                        out.write(buf, 0, read)
+                        sum += read
+                        if (total > 0) {
+                            val pct = ((sum * 100) / total).toInt()
+                            if (pct != lastPct) {
+                                lastPct = pct
+                                onProgress(pct.coerceIn(0, 100))
+                            }
+                        }
+                    }
+                }
+            }
+            onProgress(100)
+        } finally {
+            try { conn?.disconnect() } catch (_: Exception) { }
         }
-        if (!apkFile.exists()) return
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
     }
 
     private fun extractApk(zip: File, out: File) {
@@ -108,6 +180,20 @@ object UpdateManager {
                 entry = zis.nextEntry
             }
         }
-        throw IllegalStateException("No APK inside ZIP")
+        throw IllegalStateException("لا يوجد ملف APK داخل الأرشيف")
+    }
+
+    private fun install(context: Context, apk: File) {
+        try {
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apk)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "تعذّر فتح المثبّت: ${e.message}", Toast.LENGTH_LONG).show()
+        }
     }
 }
