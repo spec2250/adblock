@@ -1,0 +1,25 @@
+<resources>
+    <style name="Theme.AdBlocker" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/dark_accent</item>
+        <item name="colorOnPrimary">@color/dark_bg</item>
+        <item name="colorSecondary">@color/dark_primary</item>
+        <item name="android:colorBackground">@color/dark_bg</item>
+        <item name="colorSurface">@color/dark_surface</item>
+        <item name="colorOnSurface">@color/dark_text</item>
+        <item name="android:textColorPrimary">@color/dark_text</item>
+        <item name="android:textColorSecondary">@color/dark_text_secondary</item>
+        <item name="android:windowBackground">@color/dark_bg</item>
+    </style>
+
+    <style name="Theme.AdBlocker.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/light_accent</item>
+        <item name="colorOnPrimary">@color/light_bg</item>
+        <item name="colorSecondary">@color/light_primary</item>
+        <item name="android:colorBackground">@color/light_bg</item>
+        <item name="colorSurface">@color/light_surface</item>
+        <item name="colorOnSurface">@color/light_text</item>
+        <item name="android:textColorPrimary">@color/light_text</item>
+        <item name="android:textColorSecondary">@color/light_text_secondary</item>
+        <item name="android:windowBackground">@color/light_bg</item>
+    </style>
+</resources>
