@@ -49,10 +49,6 @@ jobs:
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/*.apk
-      - name: Signing diagnostics
-        run: |
-          ls -la "$HOME/.android" || true
-          find "$HOME" -name "debug.keystore" 2>/dev/null || true
       - name: Package APK as ZIP
         run: cd app/build/outputs/apk/debug && zip -j app-debug.zip *.apk
       - name: Create Release
