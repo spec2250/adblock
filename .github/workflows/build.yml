@@ -18,12 +18,26 @@ jobs:
       - name: Keep stable signing key
         uses: actions/cache@v4
         with:
-          path: ~/.android/debug.keystore
+          path: ~/.android
           key: android-debug-keystore-v1
+      # AGP does not always materialise the debug keystore before packaging,
+      # so create it explicitly. Gradle then reuses the same key on every run.
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
+      - name: Ensure debug keystore exists
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android -alias androiddebugkey -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          else
+            echo "Reusing cached debug keystore"
+          fi
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v3
         with:
@@ -35,6 +49,10 @@ jobs:
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/*.apk
+      - name: Signing diagnostics
+        run: |
+          ls -la "$HOME/.android" || true
+          find "$HOME" -name "debug.keystore" 2>/dev/null || true
       - name: Package APK as ZIP
         run: cd app/build/outputs/apk/debug && zip -j app-debug.zip *.apk
       - name: Create Release
