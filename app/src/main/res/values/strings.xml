@@ -1,29 +1,63 @@
 <resources>
     <string name="app_name">AdBlocker</string>
     <string name="tagline">حظر إعلانات التطبيقات • بدون تجذير</string>
-    <string name="status_off">متوقف</string>
+    <string name="status_off">الحماية متوقفة</string>
     <string name="status_on">الحماية فعّالة</string>
+    <string name="status_off_sub">فعّل المفتاح لبدء الحجب في كل التطبيقات</string>
+    <string name="status_on_sub">يعمل في الخلفية ويحجب الإعلانات تلقائياً</string>
     <string name="toggle_on">تشغيل الحماية</string>
     <string name="toggle_off">إيقاف الحماية</string>
-    <string name="blocked_count">عدد الإعلانات المحظورة</string>
+    <string name="blocked_count">إعلان تم حجبه</string>
+
     <string name="mode_root">وضع Root</string>
     <string name="mode_vpn">وضع VPN</string>
-    <string name="update_list">تحديث القائمة</string>
-    <string name="updating">جارٍ التحديث…</string>
-    <string name="update_ok">تم تحديث القائمة</string>
-    <string name="update_fail">فشل التحديث — استخدام المخزن</string>
+
+    <!-- Update check -->
+    <string name="check_updates">تحقق من التحديثات</string>
+    <string name="checking_updates">جارٍ التحقق…</string>
+    <string name="up_to_date">أنت تستخدم أحدث إصدار</string>
+    <string name="check_failed">تعذّر التحقق — تحقق من الاتصال</string>
+    <string name="update_available">يتوفر تحديث جديد</string>
+    <string name="update_notes_default">تحسينات في الأداء والواجهة وإصلاحات.</string>
+    <string name="update_now">تحديث الآن</string>
+    <string name="later">لاحقاً</string>
+    <string name="downloading">جارٍ تنزيل التحديث…</string>
+    <string name="download_progress">تنزيل التحديث… %1$d%%</string>
+    <string name="opening_installer">جارٍ فتح نافذة التثبيت…</string>
+
     <string name="vpn_permission_needed">يجب منح صلاحية VPN</string>
     <string name="root_not_available">Root غير متاح — سيُستخدم VPN</string>
     <string name="last_blocked">آخر نطاق محظور</string>
     <string name="waiting">في انتظار أول إعلان…</string>
     <string name="uptime">مدة التشغيل</string>
     <string name="list_size">نطاقات القائمة</string>
+    <string name="auto_count">مكتشفة تلقائياً</string>
     <string name="theme">المظهر</string>
+
     <string name="whitelist">النطاقات المسموحة</string>
     <string name="whitelist_title">النطاقات المسموحة (لا تُحجب)</string>
     <string name="whitelist_add">إضافة نطاق</string>
     <string name="whitelist_hint">أضف نطاقاً إذا تعطل تطبيق ما بسبب الحجب</string>
     <string name="whitelist_added">تمت الإضافة — سيُسمح بهذا النطاق</string>
     <string name="whitelist_removed">تمت الإزالة</string>
+    <string name="whitelist_empty">لا توجد نطاقات مسموحة بعد</string>
+    <string name="whitelist_remove_q">إزالة هذا النطاق من القائمة المسموحة؟</string>
+    <string name="whitelist_remove">إزالة</string>
+    <string name="cancel">إلغاء</string>
+    <string name="done">تم</string>
+    <string name="add">إضافة</string>
+    <string name="invalid_domain">أدخل نطاقاً صحيحاً</string>
+
     <string name="hint">تأكد من إيقاف Private DNS في إعدادات الهاتف</string>
+
+    <!-- Notification -->
+    <string name="notif_channel">حالة الحماية</string>
+    <string name="notif_channel_desc">إشعار دائم يوضح أن الحجب يعمل مع زر تشغيل وإيقاف</string>
+    <string name="notif_running_title">الحماية فعّالة</string>
+    <string name="notif_stopped_title">الحماية متوقفة</string>
+    <string name="notif_running_text">تم حجب %1$d إعلاناً • آخرها: %2$s</string>
+    <string name="notif_running_text_empty">تم حجب %1$d إعلاناً</string>
+    <string name="notif_stopped_text">اضغط «تشغيل» لبدء حجب الإعلانات</string>
+    <string name="notif_action_stop">إيقاف</string>
+    <string name="notif_action_start">تشغيل</string>
 </resources>

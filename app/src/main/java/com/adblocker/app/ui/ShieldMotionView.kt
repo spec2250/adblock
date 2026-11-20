@@ -9,7 +9,6 @@ import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RadialGradient
-import android.graphics.RectF
 import android.graphics.Shader
 import android.util.AttributeSet
 import android.view.View
@@ -48,7 +47,6 @@ class ShieldMotionView @JvmOverloads constructor(
     private var auraShader: Shader? = null
 
     // --- paints ---
-    private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val auraPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val shieldPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
@@ -79,14 +77,16 @@ class ShieldMotionView @JvmOverloads constructor(
     }
     private val sparklePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val shardPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val glossPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+    }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         val cx = w / 2f
         val cy = h / 2f
         val r = minOf(w, h) * 0.28f
-        bgPaint.shader = LinearGradient(0f, 0f, w.toFloat(), h.toFloat(),
-            Color.parseColor("#2E251C"), Color.parseColor("#0E0C0A"), Shader.TileMode.CLAMP)
         shieldShader = LinearGradient(cx - r * 0.6f, cy - r, cx + r * 0.6f, cy + r,
             Color.parseColor("#FFF6EA"), color, Shader.TileMode.CLAMP)
         auraShader = RadialGradient(cx, cy, r * 1.9f,
@@ -119,11 +119,6 @@ class ShieldMotionView @JvmOverloads constructor(
         val r = minOf(w, h) * 0.28f
         val p = progress
         val accent = if (enabling) color else offColor
-
-        // ---- dark rounded plate ----
-        bgPaint.shader?.let { bgPaint.shader = it }
-        val pad = minOf(w, h) * 0.02f
-        canvas.drawRoundRect(RectF(pad, pad, w - pad, h - pad), r * 0.5f, r * 0.5f, bgPaint)
 
         // ---- rotating dotted orbit ----
         val orbitScale = if (enabling) 1f else (1f - p * 0.5f)
@@ -248,10 +243,8 @@ class ShieldMotionView @JvmOverloads constructor(
         canvas.drawPath(path, bevelDark)
 
         // inner gloss
-        val hl = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE; this.alpha = (alpha * 60).toInt(); style = Paint.Style.FILL
-        }
-        canvas.drawOval(cx - r * 0.5f, cy - r * 0.68f, cx + r * 0.5f, cy - r * 0.2f, hl)
+        glossPaint.alpha = (alpha * 60).toInt()
+        canvas.drawOval(cx - r * 0.5f, cy - r * 0.68f, cx + r * 0.5f, cy - r * 0.2f, glossPaint)
 
         if (!enabled && crack > 0f) drawCrack(canvas, cx, cy, r, crack, alpha)
     }

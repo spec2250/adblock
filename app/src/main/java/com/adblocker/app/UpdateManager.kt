@@ -43,7 +43,13 @@ object UpdateManager {
     @Volatile
     private var busy = false
 
+    /** True when the last [check] could not reach GitHub (network error). */
+    @Volatile
+    var lastCheckFailed = false
+        private set
+
     fun check(): Release? {
+        lastCheckFailed = false
         return try {
             val conn = URL(API).openConnection() as HttpURLConnection
             conn.connectTimeout = 12000
@@ -74,6 +80,7 @@ object UpdateManager {
             }
             Release(code, json.optString("name", tag), body, fileUrl)
         } catch (_: Exception) {
+            lastCheckFailed = true
             null
         }
     }

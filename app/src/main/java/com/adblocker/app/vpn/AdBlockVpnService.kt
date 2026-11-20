@@ -13,6 +13,7 @@ import android.os.ParcelFileDescriptor
 import android.system.OsConstants
 import com.adblocker.app.BlocklistManager
 import com.adblocker.app.MainActivity
+import com.adblocker.app.R
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.DatagramPacket
@@ -42,10 +43,15 @@ class AdBlockVpnService : VpnService() {
     /** DNS cache: domain -> (response bytes, expiry time). TTL = 60 seconds. */
     private val dnsCache = ConcurrentHashMap<String, Pair<ByteArray, Long>>()
 
+    /** Last whitelist generation we built our DNS cache against. */
+    private var seenWhitelistVersion = -1L
+
     companion object {
         const val ACTION_START = "com.adblocker.app.START"
         const val ACTION_STOP = "com.adblocker.app.STOP"
-        const val CHANNEL_ID = "adblocker_vpn"
+        const val CHANNEL_ID = "adblocker_status"
+        const val NOTIF_ID = 1
+        const val NOTIF_STOPPED_ID = 2
         const val VPN_ADDR = "10.0.0.2"
         const val VPN_DNS = "10.0.0.3"
         private val EMPTY = ByteArray(0)
@@ -55,6 +61,20 @@ class AdBlockVpnService : VpnService() {
         @Volatile var isRunning: Boolean = false
         @Volatile var lastBlockedDomain: String = ""
         @Volatile var startedAt: Long = 0L
+
+        // Live log of recently resolved domains (so the user can block a domain
+        // that serves ads inside a specific app by tapping it).
+        @Volatile var recentDomains: List<String> = emptyList()
+        private val recentLock = Any()
+        private val recentSet = LinkedHashSet<String>()
+
+        fun logDomain(domain: String) {
+            synchronized(recentLock) {
+                recentSet.add(domain)
+                while (recentSet.size > 80) recentSet.remove(recentSet.first())
+                recentDomains = recentSet.toList()
+            }
+        }
     }
 
     override fun onCreate() {
@@ -68,27 +88,97 @@ class AdBlockVpnService : VpnService() {
             return START_NOT_STICKY
         }
         startVpn()
+        // Tapping "turn on" while already running just refreshes the counter.
+        if (running) refreshNotification()
         return START_STICKY
     }
 
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val ch = NotificationChannel(CHANNEL_ID, "AdBlocker VPN", NotificationManager.IMPORTANCE_LOW)
-            (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(ch)
+            val ch = NotificationChannel(
+                CHANNEL_ID,
+                getString(R.string.notif_channel),
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = getString(R.string.notif_channel_desc)
+                setShowBadge(false)
+                enableVibration(false)
+                setSound(null, null)
+            }
+            (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                .createNotificationChannel(ch)
         }
     }
 
+    /** PendingIntent that toggles protection straight from the notification. */
+    private fun toggleIntent(enable: Boolean): PendingIntent {
+        val intent = Intent(this, AdBlockVpnService::class.java).apply {
+            action = if (enable) ACTION_START else ACTION_STOP
+        }
+        val flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        return if (enable && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            PendingIntent.getForegroundService(this, 2, intent, flags)
+        else
+            PendingIntent.getService(this, 2, intent, flags)
+    }
+
     private fun buildNotification(): Notification {
-        val pi = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java),
+        val open = PendingIntent.getActivity(
+            this, 0,
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
+        val title = getString(
+            if (running) R.string.notif_running_title else R.string.notif_stopped_title
+        )
+        val text = if (running) {
+            val last = lastBlockedDomain
+            if (last.isNotEmpty()) getString(R.string.notif_running_text, blockedCount, last)
+            else getString(R.string.notif_running_text_empty, blockedCount)
+        } else {
+            getString(R.string.notif_stopped_text)
+        }
+        val actionLabel = getString(
+            if (running) R.string.notif_action_stop else R.string.notif_action_start
+        )
+        val actionIcon = if (running)
+            android.R.drawable.ic_menu_close_clear_cancel
+        else
+            android.R.drawable.ic_media_play
+
         val b = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             Notification.Builder(this, CHANNEL_ID) else Notification.Builder(this)
-        return b.setContentTitle("AdBlocker")
-            .setContentText(if (running) "Protection active" else "VPN active")
-            .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
-            .setContentIntent(pi).setOngoing(true).build()
+        return b
+            .setContentTitle(title)
+            .setContentText(text)
+            .setSmallIcon(R.drawable.ic_shield_notification)
+            .setContentIntent(open)
+            .setOngoing(running)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(false)
+            .setCategory(Notification.CATEGORY_SERVICE)
+            .addAction(Notification.Action.Builder(actionIcon, actionLabel, toggleIntent(!running)).build())
+            .build()
+    }
+
+    /** Re-draws the ongoing notification so the blocked counter stays fresh. */
+    private fun refreshNotification() {
+        if (!running) return
+        try {
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.notify(NOTIF_ID, buildNotification())
+        } catch (_: Exception) { }
+    }
+
+    /** Keeps a status notification with a "turn on" button after protection stops. */
+    private fun postStoppedNotification() {
+        try {
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.cancel(NOTIF_STOPPED_ID)
+            nm.notify(NOTIF_STOPPED_ID, buildNotification())
+        } catch (_: Exception) { }
     }
 
     private fun startVpn() {
@@ -111,14 +201,30 @@ class AdBlockVpnService : VpnService() {
             tun = builder.establish()
         } catch (_: Exception) {
             tun = null
+        }
+        if (tun == null) {
+            getSharedPreferences("adblocker", MODE_PRIVATE)
+                .edit().putBoolean("enabled", false).putBoolean("auto_start", false).apply()
+            // If the system launched us as a foreground service, the contract
+            // requires startForeground() before stopping again.
+            try {
+                startForeground(NOTIF_ID, buildNotification())
+                stopForeground(true)
+            } catch (_: Exception) { }
+            stopSelf()
             return
         }
-        if (tun == null) return
 
         running = true
         isRunning = true
         startedAt = System.currentTimeMillis()
-        startForeground(1, buildNotification())
+        getSharedPreferences("adblocker", MODE_PRIVATE)
+            .edit().putBoolean("enabled", true).putBoolean("auto_start", true).apply()
+        try {
+            (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                .cancel(NOTIF_STOPPED_ID)
+        } catch (_: Exception) { }
+        startForeground(NOTIF_ID, buildNotification())
         worker = Thread { runLoop() }
         worker?.start()
         cleaner = Thread { cleanLoop() }
@@ -128,6 +234,8 @@ class AdBlockVpnService : VpnService() {
     private fun stopVpn() {
         running = false
         isRunning = false
+        getSharedPreferences("adblocker", MODE_PRIVATE)
+            .edit().putBoolean("enabled", false).putBoolean("auto_start", false).apply()
         dnsCache.clear()
         for (f in udpFlows.values) f.close()
         udpFlows.clear()
@@ -141,6 +249,8 @@ class AdBlockVpnService : VpnService() {
         cleaner?.interrupt()
         cleaner = null
         stopForeground(true)
+        // Leave a persistent status card with a "turn on" button.
+        postStoppedNotification()
         stopSelf()
     }
 
@@ -160,6 +270,9 @@ class AdBlockVpnService : VpnService() {
             val dead = ArrayList<String>()
             for (e in dnsCache) if (now - e.value.second > 60_000L) dead.add(e.key)
             for (k in dead) dnsCache.remove(k)
+
+            // Keep the system notification in sync with the live counter.
+            refreshNotification()
         }
     }
 
@@ -208,6 +321,13 @@ class AdBlockVpnService : VpnService() {
 
     // ---------------- DNS ----------------
 
+    private fun recordBlock(domain: String) {
+        blockedCount += 1L
+        lastBlockedDomain = domain
+        // Keep the notification counter lively without flooding it.
+        if (blockedCount % 10L == 0L) refreshNotification()
+    }
+
     private fun handleUdp(
         buf: ByteArray, totalLen: Int, ihl: Int, srcIp: ByteArray, dstIp: ByteArray
     ) {
@@ -224,27 +344,43 @@ class AdBlockVpnService : VpnService() {
 
         if (dstPort == 53) {
             val domain = DnsUtils.parseQueryDomain(payload, payloadLen) ?: return
+            logDomain(domain)
             val now = System.currentTimeMillis()
+
+            // Whitelist edits take effect immediately (no stale 60s cache).
+            if (seenWhitelistVersion != BlocklistManager.whitelistVersion) {
+                seenWhitelistVersion = BlocklistManager.whitelistVersion
+                dnsCache.clear()
+            }
 
             // 1. Check cache.
             val cached = dnsCache[domain]
-            val response = if (cached != null && now - cached.second < 60_000L) {
-                cached.first
-            } else if (domain != null && BlocklistManager.isBlocked(domain)) {
-                blockedCount = blockedCount + 1
-                lastBlockedDomain = domain
+            val response: ByteArray
+            var cacheable = false
+            if (cached != null && now - cached.second < 60_000L) {
+                response = cached.first
+            } else if (BlocklistManager.isBlocked(domain)) {
+                recordBlock(domain)
                 // Return NOERROR + 0.0.0.0 (Pi-hole style) instead of NXDOMAIN.
                 // Many apps treat NXDOMAIN as a fatal error and stop working;
                 // a 0.0.0.0 answer is handled gracefully by virtually all apps.
-                zeroResponse(payload, payloadLen)
+                response = zeroResponse(payload, payloadLen)
+            } else if (BlocklistManager.isAdLike(domain)) {
+                // Automatic detection: an unknown ad/tracking host was spotted.
+                // Learn it permanently and block it right now.
+                BlocklistManager.autoBlock(this, domain)
+                recordBlock(domain)
+                response = zeroResponse(payload, payloadLen)
             } else {
-                forwardQueryFast(payload, payloadLen) ?: dnsResponse(payload, payloadLen, 2)
-            }.let { resp ->
-                // Cache successful responses (not NXDOMAIN/SERVFAIL) for 60s.
-                if (resp.size >= 12 && (resp[3].toInt() and 0x0F) != 3 && (resp[3].toInt() and 0x0F) != 2) {
-                    dnsCache[domain] = resp to now
-                }
-                resp
+                response = forwardQueryFast(payload, payloadLen)
+                    ?: dnsResponse(payload, payloadLen, 2)
+                cacheable = true
+            }
+
+            // Cache successful upstream answers (not errors) for 60s.
+            if (cacheable && response.size >= 12) {
+                val rcode = response[3].toInt() and 0x0F
+                if (rcode == 0) dnsCache[domain] = response to now
             }
 
             inject(buildUdpPacket(dstIp, srcIp, 53, srcPort, response))
