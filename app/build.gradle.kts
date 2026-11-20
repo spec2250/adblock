@@ -26,6 +26,21 @@ android {
         }
     }
 
+    // Sign every debug build with ONE deterministic key. CI caches ~/.android,
+    // so all releases share the same signature and in-app updates install
+    // without the dreaded "signature mismatch" / uninstall step.
+    signingConfigs {
+        getByName("debug") {
+            val keyStore = java.io.File(System.getProperty("user.home"), ".android/debug.keystore")
+            if (keyStore.exists()) {
+                storeFile = keyStore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
