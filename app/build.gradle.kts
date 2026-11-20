@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -31,7 +33,7 @@ android {
     // without the dreaded "signature mismatch" / uninstall step.
     signingConfigs {
         getByName("debug") {
-            val keyStore = java.io.File(System.getProperty("user.home"), ".android/debug.keystore")
+            val keyStore = File(System.getProperty("user.home"), ".android/debug.keystore")
             if (keyStore.exists()) {
                 storeFile = keyStore
                 storePassword = "android"
