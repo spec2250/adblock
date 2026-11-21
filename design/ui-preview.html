@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADBlock — معاينة الواجهة</title>
+<style>
+  :root{
+    --page:#F7F5F4; --white:#FFFFFF; --ink:#151515; --ink2:#8B8783; --ink3:#B8B4B0;
+    --muted:#F3F1F0; --line:#ECE9E7;
+    --gold:#F6B400; --gold2:#FFD666; --gold3:#E39A00;
+    --black:#0F0F0F; --bmuted:#9C9A97; --bline:#2A2A2A;
+    --green:#2FBF71; --red:#E05A5A; --off:#6E6A66;
+    --hero-top:#F0E4DE;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:#E8E3DD; color:var(--ink);
+    font-family:"Segoe UI", Roboto, "Noto Naskh Arabic", "Noto Sans Arabic", Tahoma, sans-serif;
+    padding:30px 24px 56px;
+    transition:background-color .25s ease;
+  }
+  .caption{max-width:900px;margin:0 auto 24px;text-align:center;color:#5B5651;font-size:13px;line-height:1.8}
+  .caption b{color:#151515}
+  .stage{display:flex;gap:48px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+  .device-wrap{display:flex;flex-direction:column;gap:10px;align-items:center}
+  .device-label{font-size:12px;font-weight:700;color:#6B6560;letter-spacing:.2px}
+  .device{
+    width:390px;height:1120px;background:var(--page);border-radius:38px;overflow:hidden;position:relative;
+    box-shadow:0 26px 60px rgba(40,30,20,.25), 0 0 0 10px #171717, 0 0 0 12px #2c2c2c;
+    transition:background-color .25s ease;
+  }
+  .statusbar{height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:700;color:var(--ink)}
+  .statusbar .icons{display:flex;gap:7px;align-items:center}
+  .bars{display:flex;gap:2px;align-items:flex-end;height:11px}
+  .bars i{display:block;width:3px;background:var(--ink);border-radius:1px}
+  .bars i:nth-child(1){height:4px}.bars i:nth-child(2){height:6px}.bars i:nth-child(3){height:8px}.bars i:nth-child(4){height:11px}
+  .wifi{width:13px;height:10px;position:relative;display:inline-block}
+  .wifi:before,.wifi:after{content:"";position:absolute;left:50%;transform:translateX(-50%);border:2px solid var(--ink);border-bottom:0;border-radius:50% 50% 0 0}
+  .wifi:before{width:13px;height:7px;top:0;opacity:.9}
+  .wifi:after{width:6px;height:3px;top:5px}
+  .battery{width:22px;height:11px;border:1.6px solid var(--ink);border-radius:3px;position:relative}
+  .battery:before{content:"";position:absolute;inset:1.5px;background:var(--ink);border-radius:1px}
+  .battery:after{content:"";position:absolute;left:-3.5px;top:3px;width:2px;height:4px;background:var(--ink);border-radius:1px}
+
+  .hero{
+    height:196px;position:relative;overflow:hidden;
+    background:linear-gradient(180deg,var(--hero-top,#F0E4DE) 0%,var(--page) 100%);
+    border-radius:0 0 34px 34px;
+  }
+  .blob{position:absolute;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(232,213,203,.42) 0%,rgba(232,213,203,.10) 45%,rgba(232,213,203,0) 70%)}
+  .blob1{width:240px;height:240px;top:-96px;left:-70px}
+  .blob2{width:170px;height:170px;bottom:-80px;right:-50px}
+  .topbar{position:relative;display:flex;align-items:center;gap:10px;padding:44px 20px 0}
+  .status{flex:1;text-align:center;line-height:1.25}
+  .status span{display:block;font-size:11px;color:var(--ink2)}
+  .status b{display:block;font-size:15px;font-weight:700;color:var(--ink);margin-top:1px}
+  .titlebar{position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;gap:10px;padding:0 20px 22px}
+  .titlebar h1{flex:1;margin:0;font-size:34px;line-height:1;font-weight:900;letter-spacing:-1px;color:var(--ink)}
+  .theme-toggle{
+    width:42px;height:42px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
+    border:1px solid var(--line);background:var(--white);color:var(--ink);cursor:pointer;padding:0;
+    -webkit-tap-highlight-color:transparent;transition:background-color .25s,color .25s,border-color .25s;
+  }
+  .theme-toggle svg{width:20px;height:20px}
+  .theme-toggle .sun{display:none}
+  .theme-toggle .moon{display:block}
+
+  .content{padding:0 20px 28px}
+  .banner{
+    margin-top:18px;background:var(--black);border-radius:28px;min-height:176px;
+    display:flex;align-items:center;gap:4px;padding:12px 8px 12px 16px;overflow:hidden;
+  }
+  .shield-stage{width:126px;height:152px;position:relative;flex:0 0 auto;display:grid;place-items:center}
+  .aura{position:absolute;inset:-26px;border-radius:50%;background:radial-gradient(circle,rgba(246,180,0,.40) 0%,rgba(246,180,0,.12) 42%,rgba(246,180,0,0) 68%);animation:breathe 3s ease-in-out infinite}
+  .off .aura{background:radial-gradient(circle,rgba(110,106,102,.28) 0%,rgba(110,106,102,.08) 45%,rgba(110,106,102,0) 70%);animation:none}
+  @keyframes breathe{0%,100%{opacity:.55;transform:scale(.96)}50%{opacity:1;transform:scale(1.06)}}
+  .orbit{position:absolute;inset:0;width:100%;height:100%}
+  .shield-svg{position:relative;width:92px;height:102px;filter:drop-shadow(0 8px 18px rgba(246,180,0,.18))}
+  .off .shield-svg{filter:none}
+  .banner-info{flex:1;min-width:0;padding-right:4px}
+  .banner-label{font-size:11px;color:var(--bmuted)}
+  .count{font-size:32px;line-height:1.1;font-weight:900;color:#fff;letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .banner-sub{font-size:11px;line-height:1.5;color:var(--bmuted);margin-top:1px}
+  .switch-row{display:flex;align-items:center;gap:6px;margin-top:10px}
+  .switch{width:44px;height:26px;border-radius:13px;background:#fff;position:relative;transition:.25s;flex:0 0 auto}
+  .switch i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--ink);transition:.25s}
+  .off .switch{background:#3A3A3A}
+  .off .switch i{left:auto;right:3px;background:#8C8C8C}
+  .switch-row span{font-size:12px;color:#fff}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  .card{background:var(--white);border-radius:24px;min-height:156px;padding:16px;display:flex;flex-direction:column}
+  .card .ic{width:40px;height:40px;border-radius:50%;background:var(--muted);display:grid;place-items:center;color:var(--ink)}
+  .card .ic svg{width:20px;height:20px}
+  .card .num{font-size:22px;font-weight:900;line-height:1.2;margin-top:12px;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card .lbl{font-size:12px;font-weight:700;margin-top:2px}
+  .card .sub{font-size:11px;color:var(--ink3);margin-top:2px}
+
+  .last{background:var(--white);border-radius:24px;padding:16px;margin-top:10px}
+  .last-head{display:flex;align-items:center;justify-content:space-between}
+  .last-head span{font-size:11px;color:var(--ink2)}
+  .last-head b{font-size:10px;color:var(--green);font-weight:700}
+  .last-domain{font-size:14px;font-weight:600;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .off .last-domain{color:var(--ink2);font-weight:500}
+
+  .btn{width:100%;border:0;border-radius:999px;font-family:inherit;font-weight:700;display:flex;align-items:center;justify-content:center;letter-spacing:0}
+  .btn.dark{height:56px;margin-top:18px;background:var(--ink);color:#fff;font-size:14px;box-shadow:0 10px 22px rgba(21,21,21,.15)}
+  .hint{font-size:11px;color:var(--ink3);text-align:center;margin-top:14px;line-height:1.6}
+
+  /* ---------- Dark mode (toggled by the moon/sun button) ---------- */
+  body.dark{
+    --page:#0C0B0A; --white:#171614; --ink:#F7F3EE; --ink2:#A39D96; --ink3:#6F6A64;
+    --muted:#22201D; --line:#2A2724; --black:#000000; --bmuted:#A39D96; --bline:#33302B;
+    --hero-top:#1A1511;
+    background:#080706;
+  }
+  body.dark .caption{color:#A39D96}
+  body.dark .caption b{color:#F7F3EE}
+  body.dark .device-label{color:#A39D96}
+  body.dark .blob{background:radial-gradient(circle,rgba(246,180,0,.10) 0%,rgba(246,180,0,.03) 45%,rgba(246,180,0,0) 70%)}
+  body.dark .theme-toggle{background:#1B1916;border-color:#302C27;color:var(--gold)}
+  body.dark .theme-toggle .sun{display:block}
+  body.dark .theme-toggle .moon{display:none}
+  body.dark .banner{border:1px solid #24211E}
+  body.dark .btn.dark{background:var(--gold);color:#151515;box-shadow:0 10px 24px rgba(246,180,0,.18)}
+
+  .card,.last,.btn,.banner,.theme-toggle{transition:background-color .25s ease,color .25s ease,border-color .25s ease}
+
+  @media (max-width:900px){
+    body{padding:20px 12px 40px}
+    .stage{gap:28px}
+    .device{zoom:.86}
+  }
+</style>
+</head>
+<body>
+  <div class="caption">
+    <b>معاينة تصميم ADBlock</b> — نسخة HTML تقريبية بنفس الألوان والأبعاد (ليست التطبيق الحقيقي).<br>
+    الحالة اليمنى: الحماية مفعّلة، والحالة اليسرى: متوقفة. اضغط زر القمر/الشمس بجانب اسم التطبيق لتجربة الوضع الليلي.
+  </div>
+  <div class="stage" id="stage"></div>
+
+<script>
+  const ICONS = {
+    shield:'<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>',
+    globe:'<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.92 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56A8.02 8.02 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14A8.2 8.2 0 0 1 4 12c0-.69.1-1.36.26-2h3.38A17 17 0 0 0 7.5 12c0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.99 7.99 0 0 1 5.08 16zm2.95-8H5.08a7.99 7.99 0 0 1 4.33-3.56A13.8 13.8 0 0 0 8.03 8zM12 19.96a13.4 13.4 0 0 1-1.91-3.96h3.82A13.4 13.4 0 0 1 12 19.96zM14.34 14H9.66A15 15 0 0 1 9.5 12c0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>',
+    clock:'<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>',
+    bolt:'<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C12.97 17.55 11 21 11 21z"/></svg>'
+  };
+
+  function shieldSvg(on, i){
+    if (on){
+      return '<svg class="shield-svg" viewBox="0 0 100 110" aria-hidden="true">' +
+        '<defs><linearGradient id="gold'+i+'" x1="0" y1="0" x2="1" y2="1">' +
+        '<stop offset="0" stop-color="#FFF0C2"/><stop offset=".55" stop-color="#F6B400"/><stop offset="1" stop-color="#E39A00"/>' +
+        '</linearGradient></defs>' +
+        '<path d="M50 6 88 24 84 56Q80 82 50 102 20 82 16 56L12 24Z" fill="url(#gold'+i+')" stroke="#FFE9B0" stroke-width="2.2"/>' +
+        '<path d="M50 6 88 24 84 56Q80 82 50 102" fill="none" stroke="#8A5E00" stroke-width="1.2" opacity=".5"/>' +
+        '<ellipse cx="50" cy="34" rx="25" ry="12" fill="#fff" opacity=".18"/>' +
+        '<path d="M31 54 43 67 69 38" fill="none" stroke="#151515" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>';
+    }
+    return '<svg class="shield-svg" viewBox="0 0 100 110" aria-hidden="true">' +
+      '<defs><linearGradient id="grey'+i+'" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0" stop-color="#BDB9B5"/><stop offset="1" stop-color="#6E6A66"/>' +
+      '</linearGradient></defs>' +
+      '<path d="M50 6 88 24 84 56Q80 82 50 102 20 82 16 56L12 24Z" fill="url(#grey'+i+')" stroke="#D8D5D2" stroke-width="1.8" opacity=".92"/>' +
+      '<path d="M24 26 47 51 36 63 62 84" fill="none" stroke="#1B1B1B" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M24 26 47 51 36 63 62 84" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/>' +
+      '</svg>';
+  }
+
+  function card(icon, num, label, sub){
+    return '<div class="card"><div class="ic">'+ICONS[icon]+'</div>'+
+      '<div class="num">'+num+'</div><div class="lbl">'+label+'</div><div class="sub">'+sub+'</div></div>';
+  }
+
+  function device(state, i){
+    const on = state.on;
+    return '<div class="device-wrap">'+
+      '<div class="device-label">'+state.deviceLabel+'</div>'+
+      '<div class="device '+(on?'on':'off')+'">'+
+        '<div class="statusbar"><span>٩:٤١</span><div class="icons"><div class="bars"><i></i><i></i><i></i><i></i></div><i class="wifi"></i><i class="battery"></i></div></div>'+
+        '<div class="hero">'+
+          '<div class="blob blob1"></div><div class="blob blob2"></div>'+
+          '<div class="topbar">'+
+            '<div class="status"><span>الحالة</span><b>'+state.status+'</b></div>'+
+          '</div>'+
+          '<div class="titlebar"><h1>ADBlock</h1>'+
+            '<button class="theme-toggle" type="button" aria-label="تبديل الوضع الليلي والنهاري">'+
+              '<svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'+
+              '<svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>'+
+            '</button>'+
+          '</div>'+
+        '</div>'+
+        '<div class="content">'+
+          '<div class="banner">'+
+            '<div class="shield-stage">'+
+              '<div class="aura"></div>'+
+              '<svg class="orbit" viewBox="0 0 160 160" aria-hidden="true"><circle cx="80" cy="80" r="62" fill="none" stroke="'+(on?'#F6B400':'#6E6A66')+'" stroke-width="2" stroke-dasharray="1 10" opacity="'+(on?'.55':'.35')+'"/></svg>'+
+              shieldSvg(on,i)+
+            '</div>'+
+            '<div class="banner-info">'+
+              '<div class="banner-label">الإعلانات المحجوبة</div>'+
+              '<div class="count">'+state.count+'</div>'+
+              '<div class="banner-sub">'+state.sub+'</div>'+
+              '<div class="switch-row"><div class="switch"><i></i></div><span>الحماية</span></div>'+
+            '</div>'+
+          '</div>'+
+          '<div class="grid">'+
+            card('shield', state.count, 'إعلان محجوب', 'الإجمالي')+
+            card('globe', '76,542', 'نطاق محجوب', 'قائمة القواعد')+
+            card('clock', state.uptime, 'مدة التشغيل', 'هذه الجلسة')+
+            card('bolt', '6,231', 'اكتشاف تلقائي', 'Auto')+
+          '</div>'+
+          '<div class="last"><div class="last-head"><span>آخر نطاق محجوب</span><b>مباشر</b></div><div class="last-domain">'+state.domain+'</div></div>'+
+          '<button class="btn dark">تحقق من التحديثات</button>'+
+          '<div class="hint">تأكد من إيقاف Private DNS في إعدادات الهاتف</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }
+
+  const states = [
+    {
+      on:true, deviceLabel:'الحماية مفعّلة',
+      status:'الحماية فعّالة',
+      sub:'يعمل في الخلفية ويحجب الإعلانات تلقائياً',
+      count:'1,284', uptime:'12m 34s', domain:'ads.tracker.io'
+    },
+    {
+      on:false, deviceLabel:'الحماية متوقفة',
+      status:'الحماية متوقفة',
+      sub:'فعّل المفتاح لبدء الحجب في كل التطبيقات',
+      count:'0', uptime:'0m 0s', domain:'في انتظار أول إعلان…'
+    }
+  ];
+
+  document.getElementById('stage').innerHTML = states.map(device).join('');
+
+  if (location.hash === '#dark') document.body.classList.add('dark');
+
+  document.querySelectorAll('.theme-toggle').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.body.classList.toggle('dark');
+    });
+  });
+</script>
+</body>
+</html>

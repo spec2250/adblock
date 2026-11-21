@@ -42,66 +42,29 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="top"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
+                android:orientation="vertical"
+                android:gravity="center"
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
-                android:paddingTop="22dp">
+                android:paddingTop="44dp">
 
-                <ImageView
-                    android:id="@+id/whitelistIcon"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
-                    android:padding="10dp"
-                    android:src="@drawable/ic_search"
-                    android:contentDescription="@string/whitelist" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center">
+                    android:text="@string/status_label"
+                    android:textSize="11sp"
+                    android:textColor="@color/ink_secondary" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/status_label"
-                        android:textSize="11sp"
-                        android:textColor="@color/ink_secondary" />
-
-                    <TextView
-                        android:id="@+id/statusText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="1dp"
-                        android:text="@string/status_off"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:fontFamily="sans-serif-medium"
-                        android:textColor="@color/ink" />
-                </LinearLayout>
-
-                <FrameLayout
-                    android:id="@+id/avatarButton"
-                    android:layout_width="46dp"
-                    android:layout_height="46dp">
-
-                    <ImageView
-                        android:layout_width="46dp"
-                        android:layout_height="46dp"
-                        android:background="@drawable/bg_avatar"
-                        android:padding="11dp"
-                        android:src="@drawable/ic_shield_solid"
-                        android:contentDescription="@string/app_name" />
-
-                    <View
-                        android:id="@+id/statusDot"
-                        android:layout_width="13dp"
-                        android:layout_height="13dp"
-                        android:layout_gravity="top|end"
-                        android:background="@drawable/status_dot" />
-                </FrameLayout>
+                <TextView
+                    android:id="@+id/statusText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="@string/status_off"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/ink" />
             </LinearLayout>
 
             <!-- Big app title anchored at the bottom of the hero -->
@@ -127,16 +90,15 @@
                     android:letterSpacing="-0.03"
                     android:textColor="@color/ink" />
 
-                <TextView
-                    android:id="@+id/detailsButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:paddingStart="8dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                    android:text="@string/view_all"
-                    android:textSize="13sp"
-                    android:textColor="@color/ink_secondary" />
+                <ImageButton
+                    android:id="@+id/themeButton"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:background="@drawable/bg_theme_toggle"
+                    android:padding="11dp"
+                    android:src="@drawable/ic_moon"
+                    android:contentDescription="@string/theme_dark"
+                    app:tint="@color/theme_icon" />
             </LinearLayout>
         </FrameLayout>
 
@@ -149,93 +111,6 @@
             android:paddingEnd="20dp"
             android:paddingBottom="28dp">
 
-            <!-- Pills -->
-            <HorizontalScrollView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:scrollbars="none"
-                android:clipToPadding="false">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/modeChip"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
-                        android:text="@string/mode_vpn"
-                        android:textSize="12sp"
-                        android:textColor="@color/ink"
-                        android:clickable="false"
-                        android:checkable="false"
-                        app:chipBackgroundColor="@color/white"
-                        app:chipStrokeWidth="0dp"
-                        app:chipCornerRadius="22dp"
-                        app:chipMinHeight="42dp"
-                        app:chipStartPadding="14dp"
-                        app:chipEndPadding="14dp"
-                        app:checkedIconVisible="false"
-                        app:ensureMinTouchTargetSize="false" />
-
-                    <com.google.android.material.chip.Chip
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
-                        android:text="@string/chip_protection"
-                        android:textSize="12sp"
-                        android:textColor="@color/ink"
-                        android:clickable="false"
-                        android:checkable="false"
-                        app:chipBackgroundColor="@color/white"
-                        app:chipStrokeWidth="0dp"
-                        app:chipCornerRadius="22dp"
-                        app:chipMinHeight="42dp"
-                        app:chipStartPadding="14dp"
-                        app:chipEndPadding="14dp"
-                        app:checkedIconVisible="false"
-                        app:ensureMinTouchTargetSize="false" />
-
-                    <com.google.android.material.chip.Chip
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
-                        android:text="@string/chip_auto"
-                        android:textSize="12sp"
-                        android:textColor="@color/ink"
-                        android:clickable="false"
-                        android:checkable="false"
-                        app:chipBackgroundColor="@color/white"
-                        app:chipStrokeWidth="0dp"
-                        app:chipCornerRadius="22dp"
-                        app:chipMinHeight="42dp"
-                        app:chipStartPadding="14dp"
-                        app:chipEndPadding="14dp"
-                        app:checkedIconVisible="false"
-                        app:ensureMinTouchTargetSize="false" />
-
-                    <com.google.android.material.chip.Chip
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/chip_all_apps"
-                        android:textSize="12sp"
-                        android:textColor="@color/ink"
-                        android:clickable="false"
-                        android:checkable="false"
-                        app:chipBackgroundColor="@color/white"
-                        app:chipStrokeWidth="0dp"
-                        app:chipCornerRadius="22dp"
-                        app:chipMinHeight="42dp"
-                        app:chipStartPadding="14dp"
-                        app:chipEndPadding="14dp"
-                        app:checkedIconVisible="false"
-                        app:ensureMinTouchTargetSize="false" />
-                </LinearLayout>
-            </HorizontalScrollView>
-
             <!-- Black status banner with the persistent shield -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/statusCard"
@@ -245,7 +120,8 @@
                 app:cardBackgroundColor="@color/black_banner"
                 app:cardCornerRadius="28dp"
                 app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                app:strokeColor="@color/banner_stroke"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -299,7 +175,7 @@
                             android:fontFamily="sans-serif-black"
                             android:maxLines="1"
                             android:ellipsize="end"
-                            android:textColor="@color/white" />
+                            android:textColor="@color/on_banner" />
 
                         <TextView
                             android:id="@+id/statusSub"
@@ -332,7 +208,7 @@
                                 android:layout_marginStart="6dp"
                                 android:text="@string/protection_label"
                                 android:textSize="12sp"
-                                android:textColor="@color/white" />
+                                android:textColor="@color/on_banner" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
@@ -356,7 +232,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginEnd="5dp"
-                        app:cardBackgroundColor="@color/white"
+                        app:cardBackgroundColor="@color/surface"
                         app:cardCornerRadius="24dp"
                         app:cardElevation="0dp"
                         app:strokeWidth="0dp">
@@ -414,7 +290,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="5dp"
-                        app:cardBackgroundColor="@color/white"
+                        app:cardBackgroundColor="@color/surface"
                         app:cardCornerRadius="24dp"
                         app:cardElevation="0dp"
                         app:strokeWidth="0dp">
@@ -478,7 +354,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginEnd="5dp"
-                        app:cardBackgroundColor="@color/white"
+                        app:cardBackgroundColor="@color/surface"
                         app:cardCornerRadius="24dp"
                         app:cardElevation="0dp"
                         app:strokeWidth="0dp">
@@ -535,7 +411,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="5dp"
-                        app:cardBackgroundColor="@color/white"
+                        app:cardBackgroundColor="@color/surface"
                         app:cardCornerRadius="24dp"
                         app:cardElevation="0dp"
                         app:strokeWidth="0dp">
@@ -595,7 +471,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                app:cardBackgroundColor="@color/white"
+                app:cardBackgroundColor="@color/surface"
                 app:cardCornerRadius="24dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp">
@@ -656,34 +532,13 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:textAllCaps="false"
-                android:textColor="@color/white"
+                android:textColor="@color/button_primary_text"
                 android:fontFamily="sans-serif-medium"
                 android:letterSpacing="0"
-                app:backgroundTint="@color/ink"
+                app:backgroundTint="@color/button_primary_bg"
                 app:cornerRadius="28dp"
                 app:elevation="0dp"
-                app:rippleColor="@color/banner_line" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/whitelistButton"
-                android:layout_width="match_parent"
-                android:layout_height="54dp"
-                android:layout_marginTop="10dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:text="@string/whitelist"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:textColor="@color/ink"
-                android:fontFamily="sans-serif-medium"
-                android:letterSpacing="0"
-                app:backgroundTint="@color/white"
-                app:cornerRadius="27dp"
-                app:strokeColor="@color/line"
-                app:strokeWidth="1dp"
-                app:elevation="0dp"
-                app:rippleColor="@color/card_muted" />
+                app:rippleColor="@color/button_primary_ripple" />
 
             <ProgressBar
                 android:id="@+id/progress"

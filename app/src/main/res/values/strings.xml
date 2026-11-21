@@ -27,6 +27,8 @@
     <string name="last_blocked_title">آخر نطاق محجوب</string>
     <string name="live_badge">مباشر</string>
     <string name="protection_label">الحماية</string>
+    <string name="theme_dark">تفعيل الوضع الليلي</string>
+    <string name="theme_light">تفعيل الوضع النهاري</string>
     <string name="details_title">تفاصيل الحماية</string>
     <string name="details_body">الحالة: %1$s\nالوضع: %2$s\nالإعلانات المحجوبة: %3$d\nنطاقات القائمة: %4$d\nمكتشفة تلقائياً: %5$d</string>
 

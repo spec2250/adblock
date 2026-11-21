@@ -6,7 +6,7 @@ import android.animation.ValueAnimator
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.drawable.GradientDrawable
+import android.content.res.Configuration
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
@@ -15,11 +15,12 @@ import android.os.Looper
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
-import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.adblocker.app.root.RootManager
@@ -41,8 +42,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var statusText: TextView
     private lateinit var statusSub: TextView
-    private lateinit var statusDot: View
-    private lateinit var modeChip: com.google.android.material.chip.Chip
+    private lateinit var themeButton: ImageButton
     private lateinit var protectionSwitch: MaterialSwitch
     private lateinit var glow: View
     private lateinit var motion: ShieldMotionView
@@ -62,8 +62,7 @@ class MainActivity : AppCompatActivity() {
 
         statusText = findViewById(R.id.statusText)
         statusSub = findViewById(R.id.statusSub)
-        statusDot = findViewById(R.id.statusDot)
-        modeChip = findViewById(R.id.modeChip)
+        themeButton = findViewById(R.id.themeButton)
         protectionSwitch = findViewById(R.id.protectionSwitch)
         glow = findViewById(R.id.glow)
         motion = findViewById(R.id.motion)
@@ -86,12 +85,25 @@ class MainActivity : AppCompatActivity() {
         refreshUi()
         animateIn()
 
+        // The moon/sun button flips the whole app between the two explicit
+        // palettes. AppCompat recreates this activity with values-night applied.
+        updateThemeButton()
+        themeButton.setOnClickListener {
+            val goDark = !isDarkMode()
+            getSharedPreferences("adblocker", MODE_PRIVATE).edit()
+                .putBoolean("dark_mode", goDark)
+                .apply()
+            AppCompatDelegate.setDefaultNightMode(
+                if (goDark) AppCompatDelegate.MODE_NIGHT_YES
+                else AppCompatDelegate.MODE_NIGHT_NO
+            )
+        }
+
         // Root detection off the main thread.
         Thread {
             val hasRoot = RootManager.isRootAvailable()
             runOnUiThread {
                 rootMode = hasRoot
-                modeChip.text = getString(if (rootMode) R.string.mode_root else R.string.mode_vpn)
                 refreshUi()
             }
         }.start()
@@ -101,10 +113,6 @@ class MainActivity : AppCompatActivity() {
             runMotionAndToggle(checked)
         }
         updateButton.setOnClickListener { checkUpdate(manual = true) }
-        findViewById<View>(R.id.whitelistButton).setOnClickListener { showWhitelistDialog() }
-        findViewById<View>(R.id.whitelistIcon).setOnClickListener { showWhitelistDialog() }
-        findViewById<View>(R.id.avatarButton).setOnClickListener { showDetailsDialog() }
-        findViewById<View>(R.id.detailsButton).setOnClickListener { showDetailsDialog() }
 
         requestNotificationPermission()
         startUiLoop()
@@ -116,22 +124,44 @@ class MainActivity : AppCompatActivity() {
     // ---------------------------------------------------------------------
 
     /**
-     * Keep system bar icons readable on the cream background. API 23/26 use
-     * dark icons; older versions get a black bar because they cannot invert.
+     * Keep system bar icons readable in both palettes. API 23/26 use dark
+     * icons on the light palette and light icons on the dark palette; older
+     * versions get a black bar because they cannot invert the icons.
      */
     private fun styleSystemBars() {
+        val dark = isDarkMode()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            window.decorView.systemUiVisibility =
-                window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            var flags = window.decorView.systemUiVisibility
+            flags = if (dark) {
+                flags and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+            } else {
+                flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                flags = if (dark) {
+                    flags and View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR.inv()
+                } else {
+                    flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+                }
+            }
+            window.decorView.systemUiVisibility = flags
         } else {
-            window.statusBarColor = ContextCompat.getColor(this, R.color.ink)
+            window.statusBarColor = ContextCompat.getColor(this, R.color.black_banner)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            window.decorView.systemUiVisibility =
-                window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-        } else {
-            window.navigationBarColor = ContextCompat.getColor(this, R.color.ink)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            window.navigationBarColor = ContextCompat.getColor(this, R.color.black_banner)
         }
+    }
+
+    private fun isDarkMode(): Boolean =
+        (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
+
+    private fun updateThemeButton() {
+        val dark = isDarkMode()
+        themeButton.setImageResource(if (dark) R.drawable.ic_sun else R.drawable.ic_moon)
+        themeButton.contentDescription =
+            getString(if (dark) R.string.theme_light else R.string.theme_dark)
     }
 
     private fun animateIn() {
@@ -369,86 +399,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ---------------------------------------------------------------------
-    // Details + whitelist (a broken app can still be fixed in one tap)
-    // ---------------------------------------------------------------------
-
-    private fun showDetailsDialog() {
-        val status = getString(if (isOn) R.string.status_on else R.string.status_off)
-        val mode = getString(if (rootMode) R.string.mode_root else R.string.mode_vpn)
-        val count = if (rootMode) BlocklistManager.size() else AdBlockVpnService.blockedCount
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.details_title)
-            .setMessage(
-                getString(
-                    R.string.details_body,
-                    status,
-                    mode,
-                    count,
-                    BlocklistManager.size(),
-                    BlocklistManager.autoDetectedCount()
-                )
-            )
-            .setPositiveButton(R.string.done, null)
-            .show()
-    }
-
-    private fun showWhitelistDialog() {
-        val items = BlocklistManager.userWhitelist().toSortedSet().toList()
-        if (items.isEmpty()) {
-            MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.whitelist_title)
-                .setMessage(R.string.whitelist_empty)
-                .setNeutralButton(R.string.whitelist_add) { _, _ -> showAddWhitelistDialog() }
-                .setPositiveButton(R.string.done, null)
-                .show()
-            return
-        }
-        val display = items.toTypedArray()
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.whitelist_title)
-            .setMessage(R.string.whitelist_hint)
-            .setItems(display) { _, which ->
-                val domain = items[which]
-                MaterialAlertDialogBuilder(this)
-                    .setTitle(domain)
-                    .setMessage(R.string.whitelist_remove_q)
-                    .setPositiveButton(R.string.whitelist_remove) { _, _ ->
-                        BlocklistManager.unwhitelist(this, domain)
-                        Toast.makeText(this, R.string.whitelist_removed, Toast.LENGTH_SHORT).show()
-                    }
-                    .setNegativeButton(R.string.cancel, null)
-                    .show()
-            }
-            .setNeutralButton(R.string.whitelist_add) { _, _ -> showAddWhitelistDialog() }
-            .setPositiveButton(R.string.done, null)
-            .show()
-    }
-
-    private fun showAddWhitelistDialog() {
-        val input = EditText(this).apply {
-            hint = "example.com"
-            isSingleLine = true
-            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.ink))
-            setHintTextColor(ContextCompat.getColor(this@MainActivity, R.color.ink_tertiary))
-        }
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.whitelist_add)
-            .setMessage(R.string.whitelist_hint)
-            .setView(input)
-            .setPositiveButton(R.string.add) { _, _ ->
-                val domain = input.text.toString().trim()
-                if (domain.contains('.') && domain.length > 3) {
-                    BlocklistManager.whitelist(this, domain)
-                    Toast.makeText(this, R.string.whitelist_added, Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, R.string.invalid_domain, Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-
-    // ---------------------------------------------------------------------
     // Live UI
     // ---------------------------------------------------------------------
 
@@ -471,16 +421,6 @@ class MainActivity : AppCompatActivity() {
         suppressSwitch = true
         protectionSwitch.isChecked = isOn
         suppressSwitch = false
-
-        val dot = statusDot.background as? GradientDrawable
-        dot?.setColor(
-            ContextCompat.getColor(
-                this,
-                if (isOn) R.color.online_green else R.color.offline_red
-            )
-        )
-
-        modeChip.text = getString(if (rootMode) R.string.mode_root else R.string.mode_vpn)
 
         val count = if (rootMode) BlocklistManager.size().toLong() else AdBlockVpnService.blockedCount
         if (count != lastCount) {
