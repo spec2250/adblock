@@ -61,24 +61,28 @@ jobs:
           gradle-version: 8.2
       - name: Build debug APK
         run: gradle assembleDebug -PbuildNumber=${{ github.run_number }} --no-daemon
+      - name: Package APK under the app name
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk dist/ADBlock.apk
+          ls -l dist
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: app/build/outputs/apk/debug/*.apk
-      - name: Package APK as ZIP
-        run: cd app/build/outputs/apk/debug && zip -j app-debug.zip *.apk
+          name: ADBlock
+          path: dist/ADBlock.apk
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
-          name: AdBlocker v${{ github.run_number }}
+          name: ADBlock v${{ github.run_number }}
           body: |
+            • اسم الملف أصبح ADBlock.apk (تثبيت مباشر بدون فك ضغط).
             • اكتشاف تلقائي (Auto) لنطاقات الإعلان والتتبع وحجبها.
             • إشعار دائم في الهاتف بزر تشغيل/إيقاف ومع عدّاد الإعلانات.
             • مفتاح Toggle أنيق بدل زر التشغيل، وحركات ظهور ناعمة.
             • تصميم جديد لحركة الدرع بدون خلفية.
             • زر «تحقق من التحديثات» للتطبيق بدل تحديث القائمة.
-          files: app/build/outputs/apk/debug/app-debug.zip
+          files: dist/ADBlock.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

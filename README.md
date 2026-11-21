@@ -1,4 +1,4 @@
-# AdBlocker
+# ADBlock
 
 Android ad blocker for apps (system-wide). Two modes:
 - **Root mode**: edits `/system/etc/hosts` (requires root).
@@ -8,7 +8,7 @@ Android ad blocker for apps (system-wide). Two modes:
 Push to GitHub and use the included GitHub Actions workflow:
 1. Push files to repo root (`.github`, `app`, `build.gradle.kts`, ...).
 2. Actions tab → "Build APK" → Run workflow.
-3. Download `app-debug` artifact → unzip → `app-debug.apk`.
+3. Download the `ADBlock.apk` artifact (or the release asset with the same name) and install it directly — no unzip step.
 
 ## Install warning "Scan app / suspicious"
 Normal for side-loaded APKs (self-signed key, no Play Store reputation).

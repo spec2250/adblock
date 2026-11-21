@@ -144,10 +144,14 @@ If the signing key ever changes, every user must uninstall once before installin
 `.github/workflows/build.yml` — on every push to `main`:
 1. checkout → cache keystore → setup JDK 17 → ensure keystore → Gradle 8.2
 2. `gradle assembleDebug -PbuildNumber=${{ github.run_number }} --no-daemon`
-3. upload artifact → zip → **create release `v<run_number>`** with `app-debug.zip`
+3. copy `app-debug.apk` → `dist/ADBlock.apk` → upload artifact → **create release `v<run_number>`** with `ADBlock.apk`
 
 Release URL pattern:
-`https://github.com/spec2250/adblock/releases/download/v<N>/app-debug.zip`
+`https://github.com/spec2250/adblock/releases/download/v<N>/ADBlock.apk`
+
+The asset is a bare APK named `ADBlock.apk` (not a ZIP), and the app label is
+`ADBlock` (`strings.xml` → `app_name`). `UpdateManager` accepts both `.apk` and
+`.zip` assets, so older installed versions still update correctly.
 
 **Gotcha:** editing `.github/workflows/*` requires a token with
 **Workflows: Read and write** in addition to **Contents: Read and write**.

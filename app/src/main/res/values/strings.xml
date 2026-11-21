@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">AdBlocker</string>
+    <string name="app_name">ADBlock</string>
     <string name="tagline">حظر إعلانات التطبيقات • بدون تجذير</string>
     <string name="status_off">الحماية متوقفة</string>
     <string name="status_on">الحماية فعّالة</string>
