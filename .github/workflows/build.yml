@@ -2,6 +2,13 @@ name: Build APK
 on:
   push:
     branches: [ main, master ]
+    # Documentation/tooling changes must not produce a release APK.
+    paths-ignore:
+      - '**.md'
+      - 'tools/**'
+      - 'design/**'
+      - '.gitignore'
+      - 'LICENSE'
   workflow_dispatch:
 
 permissions:

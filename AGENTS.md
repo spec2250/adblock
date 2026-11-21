@@ -213,7 +213,7 @@ touching `.github/workflows`). Ask the user for it — never store it in the rep
 
 ## 10. State & sensible next steps
 
-Shipped and working (v19):
+Shipped and working (v19+):
 auto-detection engine, curated provider list, real notification with toggle,
 `MaterialSwitch`, entrance/crossfade animations, new shield animation (no background
 plate), «تحقق من التحديثات», stable signing, release pipeline.
@@ -237,4 +237,4 @@ Good next candidates (pick with the user, verify each via CI):
 - [ ] New Kotlin APIs are minSdk-21 safe
 - [ ] No token, keystore or secret added to the repo
 
-Current release: **v19** · signature `45CBAF40…` · version code = Actions run number.
+Current release: see `releases/latest` · signature `45CBAF40…` · version code = Actions run number.
