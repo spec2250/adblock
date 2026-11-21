@@ -24,7 +24,7 @@ import kotlin.math.sin
  * No system attributes used - all colors are explicit.
  *
  * Features:
- * - Shield with cream→gold gradient
+ * - Shield with creamâ†’gold gradient
  * - Rotating dotted orbit
  * - Pulsing aura
  * - Sweeping light rays
@@ -40,19 +40,19 @@ class ShieldMotionView @JvmOverloads constructor(
 
     // ==================== EXPLICIT CUSTOM COLORS (NO SYSTEM ATTRIBUTES) ====================
     // Cream gold palette - matching Material 3 creamy theme
-    var color: Int = 0xFFD4A574   // cream main
-    var onColor: Int = 0xFF7FA87F  // green accent when active
-    var offColor: Int = 0xFFA87070 // red when inactive
+    var color: Int = 0xFFD4A574.toInt()   // cream main
+    var onColor: Int = 0xFF7FA87F.toInt()  // green accent when active
+    var offColor: Int = 0xFFA87070.toInt() // red when inactive
 
     // Supporting colors
-    private val auraInnerColor: Int = 0x4CD4A574   // semi-transparent cream
-    private val auraOuterColor: Int = 0x00D4A574   // transparent
-    private val rayColor: Int = 0xFFFFD6A5          // light ray color
-    private val checkColor: Int = 0xFF2E241C        // check mark color
-    private val checkGlowColor: Int = 0xFF3A2A1E   // check glow
-    private val crackColor: Int = 0xFF2A1E16        // crack color
-    private val shardColor: Int = 0xFFD4A574        // shard color
-    private val sparkleColor: Int = 0xFFFFFFFF      // white sparkles
+    private val auraInnerColor: Int = 0x4CD4A574.toInt()   // semi-transparent cream
+    private val auraOuterColor: Int = 0x00D4A574.toInt()   // transparent
+    private val rayColor: Int = 0xFFFFD6A5.toInt()          // light ray color
+    private val checkColor: Int = 0xFF2E241C.toInt()        // check mark color
+    private val checkGlowColor: Int = 0xFF3A2A1E.toInt()   // check glow
+    private val crackColor: Int = 0xFF2A1E16.toInt()        // crack color
+    private val shardColor: Int = 0xFFD4A574.toInt()        // shard color
+    private val sparkleColor: Int = 0xFFFFFFFF.toInt()      // white sparkles
 
     // ==================== ANIMATION STATE ====================
     private var progress = 0f          // 0..1 master timeline
@@ -67,10 +67,10 @@ class ShieldMotionView @JvmOverloads constructor(
         pathEffect = CornerPathEffect(6f)
     }
     private val bevelLight = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; color = 0xFFFFE9CC; strokeWidth = 3f
+        style = Paint.Style.STROKE; color = 0xFFFFE9CC.toInt(); strokeWidth = 3f
     }
     private val bevelDark = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; color = 0xFF6E4526; strokeWidth = 2f
+        style = Paint.Style.STROKE; color = 0xFF6E4526.toInt(); strokeWidth = 2f
     }
     private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val rayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -107,11 +107,11 @@ class ShieldMotionView @JvmOverloads constructor(
         val cy = h / 2f
         val r = minOf(w, h) * 0.28f
 
-        // Cream → gold linear gradient for shield
+        // Cream â†’ gold linear gradient for shield
         shieldShader = LinearGradient(
             cx - r * 0.6f, cy - r,
             cx + r * 0.6f, cy + r,
-            intArrayOf(0xFFFFF6EA, color),
+            intArrayOf(0xFFFFF6EA.toInt(), color),
             Shader.TileMode.CLAMP
         )
 
