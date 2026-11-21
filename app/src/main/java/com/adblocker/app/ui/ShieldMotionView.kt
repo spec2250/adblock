@@ -112,6 +112,7 @@ class ShieldMotionView @JvmOverloads constructor(
             cx - r * 0.6f, cy - r,
             cx + r * 0.6f, cy + r,
             intArrayOf(0xFFFFF6EA.toInt(), color),
+            floatArrayOf(0f, 1f),
             Shader.TileMode.CLAMP
         )
 
