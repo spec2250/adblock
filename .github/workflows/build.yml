@@ -19,6 +19,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # A Windows editor can save a file with a UTF-8 BOM. AGP's resource
+      # parser then dies with: mismatched input '﻿' expecting '<'
+      # (this exact failure broke run #22). Strip BOMs before building.
+      - name: Strip UTF-8 BOM from text files
+        run: |
+          mapfile -t files < <(grep -rlI $'\xEF\xBB\xBF' . --exclude-dir=.git || true)
+          for f in "${files[@]}"; do
+            sed -i '1s/^\xEF\xBB\xBF//' "$f"
+            echo "stripped BOM: $f"
+          done
       # Keep ONE debug keystore across runs. Without this, every build gets a
       # brand new signature and Android refuses the in-app update
       # ("signature mismatch"), which made "تحديث الآن" do nothing.

@@ -193,6 +193,10 @@ touching `.github/workflows`). Ask the user for it — never store it in the rep
 - Don't touch `assets/blocklist.txt` (2.3 MB, known-good).
 - Don't remove the keystore cache/signing config (breaks in-app updates).
 - All user-facing text is **Arabic** in `strings.xml`; RTL must stay intact.
+- **Never save text/XML files with a UTF-8 BOM.** AGP fails the build with
+  `mismatched input '﻿'` / `Cannot read field "elmName" because "root" is null`.
+  `tools/push.ps1` strips BOMs on upload and the workflow strips them again before
+  Gradle, but keep editors set to "UTF-8 without BOM".
 - `R.string` / `R.id` references must exist — the project has no resource-lint gate,
   a typo only shows up as a CI compile error.
 

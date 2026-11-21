@@ -66,9 +66,20 @@ $files = Get-ChildItem -Path $root -Recurse -File | Where-Object {
 }
 
 $entries = @()
+$textExt = @('.xml', '.kt', '.kts', '.yml', '.yaml', '.md', '.properties', '.txt', '.json', '.gradle', '.pro', '.ps1')
 foreach ($f in $files) {
     $rel = $f.FullName.Substring($root.Length + 1).Replace('\', '/')
     $bytes = [System.IO.File]::ReadAllBytes($f.FullName)
+    # Never upload a UTF-8 BOM: AGP's resource parser rejects XML files that
+    # start with one ("mismatched input '﻿'"). Fix the local file too.
+    if (($textExt -contains $f.Extension.ToLower()) -and
+        $bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+        $clean = New-Object byte[] ($bytes.Length - 3)
+        [System.Array]::Copy($bytes, 3, $clean, 0, $clean.Length)
+        $bytes = $clean
+        [System.IO.File]::WriteAllBytes($f.FullName, $bytes)
+        Write-Warning "stripped UTF-8 BOM: $rel"
+    }
     $sha = Get-BlobSha $bytes
     if ($remote.ContainsKey($rel) -and $remote[$rel] -eq $sha) { continue }
     if ($DryRun) { Write-Output "would upload $rel"; continue }

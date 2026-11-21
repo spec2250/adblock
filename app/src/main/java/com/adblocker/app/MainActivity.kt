@@ -72,9 +72,12 @@ class MainActivity : AppCompatActivity() {
         protectionSwitch = findViewById(R.id.protectionSwitch)
         glow = findViewById(R.id.glow)
         motion = findViewById(R.id.motion)
-        motion.color = if (light) ContextCompat.getColor(this, R.color.custom_toggle_active) else R.color.dark_toggle_on
-        motion.onColor = if (light) ContextCompat.getColor(this, R.color.custom_toggle_active) else R.color.dark_toggle_on
-        motion.offColor = if (light) ContextCompat.getColor(this, R.color.custom_toggle_inactive) else R.color.dark_toggle_off
+        motion.color = ContextCompat.getColor(this,
+            if (light) R.color.custom_toggle_active else R.color.dark_toggle_on)
+        motion.onColor = ContextCompat.getColor(this,
+            if (light) R.color.custom_toggle_active else R.color.dark_toggle_on)
+        motion.offColor = ContextCompat.getColor(this,
+            if (light) R.color.custom_toggle_inactive else R.color.dark_toggle_off)
         counterValue = findViewById(R.id.counterValue)
         lastBlocked = findViewById(R.id.lastBlocked)
         uptime = findViewById(R.id.uptime)

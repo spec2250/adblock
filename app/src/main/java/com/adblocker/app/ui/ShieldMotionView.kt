@@ -49,7 +49,7 @@ class ShieldMotionView @JvmOverloads constructor(
     private val auraOuterColor: Int = 0x00D4A574   // transparent
     private val rayColor: Int = 0xFFFFD6A5          // light ray color
     private val checkColor: Int = 0xFF2E241C        // check mark color
-    private val checkGlowColor: Int = 0x3F2A1E      // check glow
+    private val checkGlowColor: Int = 0xFF3A2A1E   // check glow
     private val crackColor: Int = 0xFF2A1E16        // crack color
     private val shardColor: Int = 0xFFD4A574        // shard color
     private val sparkleColor: Int = 0xFFFFFFFF      // white sparkles
@@ -111,7 +111,7 @@ class ShieldMotionView @JvmOverloads constructor(
         shieldShader = LinearGradient(
             cx - r * 0.6f, cy - r,
             cx + r * 0.6f, cy + r,
-            intArrayOf(0xFFF6EA, color),
+            intArrayOf(0xFFFFF6EA, color),
             Shader.TileMode.CLAMP
         )
 
@@ -153,7 +153,7 @@ class ShieldMotionView @JvmOverloads constructor(
         // ---- rotating dotted orbit ----
         val orbitScale = if (enabling) 1f else (1f - p * 0.5f)
         val spin = p * (if (enabling) 2.4f else -1.6f)
-        val orbitAlpha = (0.45f + 0.25f * sin(p * PI)).coerceIn(0f, 1f)
+        val orbitAlpha = (0.45f + 0.25f * sin(p * PI.toFloat())).coerceIn(0f, 1f)
         for (i in 0 until 36) {
             val a = (i * 10) * PI / 180.0 + spin
             val d = r * 1.55f * orbitScale
