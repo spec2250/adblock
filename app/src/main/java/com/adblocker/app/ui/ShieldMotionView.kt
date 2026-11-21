@@ -10,23 +10,27 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RadialGradient
 import android.graphics.Shader
+import android.graphics.SweepGradient
 import android.util.AttributeSet
 import android.view.View
 import android.view.animation.DecelerateInterpolator
+import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.PI
 import kotlin.math.sin
 
 /**
- * Professional "activation / deactivation" animation in the style of the app icon.
+ * Shield animation completely re-drawn with custom creamy/gold colors.
+ * No system attributes used - all colors are explicit.
  *
- * The shield is the hero: it is the actual icon shape (cream→gold gradient,
- * layered bevel), it draws itself in with an animated trim, and a check mark
- * is revealed stroke by stroke. Around it a dotted orbit rotates continuously,
- * a soft aura pulses, light rays sweep, and sparkles twinkle.
- *
- * Deactivation reverses the sequence: the check un-draws, a jagged crack
- * travels across the shield, then the shield breaks into shards that fly
- * outward and fade, while the orbit collapses.
+ * Features:
+ * - Shield with cream→gold gradient
+ * - Rotating dotted orbit
+ * - Pulsing aura
+ * - Sweeping light rays
+ * - Check mark reveal
+ * - Sparkle twinkles
+ * - Deactivation: crack + shards
  */
 class ShieldMotionView @JvmOverloads constructor(
     context: Context,
@@ -34,29 +38,39 @@ class ShieldMotionView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    var color: Int = Color.parseColor("#D4A574")
-    var onColor: Int = Color.parseColor("#7FA87F")
-    var offColor: Int = Color.parseColor("#A87070")
+    // ==================== EXPLICIT CUSTOM COLORS (NO SYSTEM ATTRIBUTES) ====================
+    // Cream gold palette - matching Material 3 creamy theme
+    var color: Int = 0xFFD4A574   // cream main
+    var onColor: Int = 0xFF7FA87F  // green accent when active
+    var offColor: Int = 0xFFA87070 // red when inactive
 
+    // Supporting colors
+    private val auraInnerColor: Int = 0x4CD4A574   // semi-transparent cream
+    private val auraOuterColor: Int = 0x00D4A574   // transparent
+    private val rayColor: Int = 0xFFFFD6A5          // light ray color
+    private val checkColor: Int = 0xFF2E241C        // check mark color
+    private val checkGlowColor: Int = 0x3F2A1E      // check glow
+    private val crackColor: Int = 0xFF2A1E16        // crack color
+    private val shardColor: Int = 0xFFD4A574        // shard color
+    private val sparkleColor: Int = 0xFFFFFFFF      // white sparkles
+
+    // ==================== ANIMATION STATE ====================
     private var progress = 0f          // 0..1 master timeline
     private var enabling = true
     private var animator: ValueAnimator? = null
     private var endAction: (() -> Unit)? = null
 
-    private var shieldShader: Shader? = null
-    private var auraShader: Shader? = null
-
-    // --- paints ---
+    // ==================== PAINTS ====================
     private val auraPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val shieldPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
         pathEffect = CornerPathEffect(6f)
     }
     private val bevelLight = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; color = Color.parseColor("#FFE9CC"); strokeWidth = 3f
+        style = Paint.Style.STROKE; color = 0xFFFFE9CC; strokeWidth = 3f
     }
     private val bevelDark = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; color = Color.parseColor("#6E4526"); strokeWidth = 2f
+        style = Paint.Style.STROKE; color = 0xFF6E4526; strokeWidth = 2f
     }
     private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val rayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -65,12 +79,12 @@ class ShieldMotionView @JvmOverloads constructor(
     private val checkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE; strokeWidth = 11f
         strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
-        color = Color.parseColor("#2E241C")
+        color = checkColor
     }
     private val checkGlow = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE; strokeWidth = 20f
         strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
-        color = Color.parseColor("#3A2A1E")
+        color = checkGlowColor
     }
     private val crackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
@@ -82,16 +96,32 @@ class ShieldMotionView @JvmOverloads constructor(
         style = Paint.Style.FILL
     }
 
+    // ==================== GRADIENTS ====================
+    private var shieldShader: Shader? = null
+    private var auraShader: Shader? = null
+    private var rayGradient: Shader? = null
+
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         val cx = w / 2f
         val cy = h / 2f
         val r = minOf(w, h) * 0.28f
-        shieldShader = LinearGradient(cx - r * 0.6f, cy - r, cx + r * 0.6f, cy + r,
-            Color.parseColor("#FFF6EA"), color, Shader.TileMode.CLAMP)
+
+        // Cream → gold linear gradient for shield
+        shieldShader = LinearGradient(
+            cx - r * 0.6f, cy - r,
+            cx + r * 0.6f, cy + r,
+            intArrayOf(0xFFF6EA, color),
+            Shader.TileMode.CLAMP
+        )
+
+        // Aura radial gradient
         auraShader = RadialGradient(cx, cy, r * 1.9f,
-            intArrayOf(Color.argb(60, 212, 165, 116), Color.TRANSPARENT),
+            intArrayOf(auraInnerColor, auraOuterColor),
             floatArrayOf(0f, 1f), Shader.TileMode.CLAMP)
+
+        // Ray sweep gradient (sweeping rays)
+        rayGradient = SweepGradient(0f, 0f, intArrayOf(rayColor, Color.TRANSPARENT), floatArrayOf(0f, 1f))
     }
 
     fun play(enable: Boolean, onEnd: () -> Unit) {
@@ -123,9 +153,9 @@ class ShieldMotionView @JvmOverloads constructor(
         // ---- rotating dotted orbit ----
         val orbitScale = if (enabling) 1f else (1f - p * 0.5f)
         val spin = p * (if (enabling) 2.4f else -1.6f)
-        val orbitAlpha = (0.45f + 0.25f * sin(p * Math.PI.toFloat())).coerceIn(0f, 1f)
+        val orbitAlpha = (0.45f + 0.25f * sin(p * PI)).coerceIn(0f, 1f)
         for (i in 0 until 36) {
-            val a = (i * 10) * Math.PI / 180.0 + spin
+            val a = (i * 10) * PI / 180.0 + spin
             val d = r * 1.55f * orbitScale
             dotPaint.color = accent
             dotPaint.alpha = (orbitAlpha * (if (i % 3 == 0) 220 else 110)).toInt()
@@ -141,12 +171,12 @@ class ShieldMotionView @JvmOverloads constructor(
             canvas.drawCircle(cx, cy, r * 1.9f, auraPaint)
         }
 
+        // ---- expanding halo rings (when enabling) ----
         if (enabling) {
-            // expanding halo rings
             for (i in 0..2) {
                 val t = (p - i * 0.13f).coerceIn(0f, 1f)
                 if (t > 0f) {
-                    rayPaint.color = color
+                    rayPaint.color = accent
                     rayPaint.alpha = ((1f - t) * 150).toInt()
                     rayPaint.strokeWidth = 6f - 3f * t
                     canvas.drawCircle(cx, cy, r * (0.9f + t * 1.5f), rayPaint)
@@ -156,10 +186,10 @@ class ShieldMotionView @JvmOverloads constructor(
             val rayT = ((p - 0.15f) / 0.6f).coerceIn(0f, 1f)
             if (rayT > 0f) {
                 for (i in 0 until 8) {
-                    val a = (i * 45) * Math.PI / 180.0 + p * 0.4f
+                    val a = (i * 45) * PI / 180.0 + p * 0.4f
                     val inner = r * (1.05f + rayT * 0.35f)
                     val outer = r * (1.15f + rayT * 0.9f)
-                    rayPaint.color = color
+                    rayPaint.color = accent
                     rayPaint.alpha = ((1f - rayT) * 170).toInt()
                     rayPaint.strokeWidth = 4f
                     canvas.drawLine((cx + cos(a) * inner).toFloat(), (cy + sin(a) * inner).toFloat(),
@@ -179,7 +209,7 @@ class ShieldMotionView @JvmOverloads constructor(
             if (enabling && p > 0.42f) {
                 // subtle overshoot "pop"
                 val t = ((p - 0.42f) / 0.2f).coerceIn(0f, 1f)
-                scale += 0.08f * sin(t * Math.PI.toFloat())
+                scale += 0.08f * sin(t * PI.toFloat())
             }
             drawShield(canvas, cx, cy, r * scale, shieldAppear, enabling, crack = 0f)
         }
@@ -191,8 +221,8 @@ class ShieldMotionView @JvmOverloads constructor(
 
             // sparkles twinkle around
             for (i in 0 until 6) {
-                val a = (60 + i * 60) * Math.PI / 180.0 + p * 0.6f
-                val d = r * (1.35f + 0.15f * sin(i * 1.7f + p * 6f))
+                val a = (60 + i * 60) * PI / 180.0 + p * 0.6f
+                val d = r * (1.35f + 0.15f * absSin(i * 1.7f + p * 6f))
                 val tw = (0.4f + 0.6f * absSin(p * 5f + i)).coerceIn(0f, 1f)
                 drawSparkle(canvas, (cx + cos(a) * d).toFloat(), (cy + sin(a) * d).toFloat(),
                     9f + 3f * tw, tw * (1f - p * 0.3f))
@@ -205,13 +235,13 @@ class ShieldMotionView @JvmOverloads constructor(
             val burst = ((p - 0.4f) / 0.6f).coerceIn(0f, 1f)
             if (burst > 0f) {
                 for (i in 0 until 9) {
-                    val a = (i * 40 + 15) * Math.PI / 180.0
+                    val a = (i * 40 + 15) * PI / 180.0
                     val d = r * (0.4f + burst * 2.4f)
                     drawShard(canvas, (cx + cos(a) * d).toFloat(), (cy + sin(a) * d).toFloat(),
                         14f, (a + burst * 2f).toFloat(), (1f - burst).coerceIn(0f, 1f))
                 }
                 for (i in 0 until 8) {
-                    val a = (i * 45) * Math.PI / 180.0
+                    val a = (i * 45) * PI / 180.0
                     val d = r * (1f + burst * 2f)
                     drawSparkle(canvas, (cx + cos(a) * d).toFloat(), (cy + sin(a) * d).toFloat(),
                         8f, (1f - burst).coerceIn(0f, 1f), offColor)
@@ -279,7 +309,7 @@ class ShieldMotionView @JvmOverloads constructor(
         if (total <= 0f) return
         crackPaint.pathEffect =
             android.graphics.DashPathEffect(floatArrayOf(total * eased, total * (1f - eased) + 10f), 0f)
-        crackPaint.color = Color.parseColor("#2A1E16")
+        crackPaint.color = crackColor
         crackPaint.strokeWidth = 12f
         crackPaint.alpha = (alpha * 255 * eased).toInt()
         canvas.drawPath(c, crackPaint)
@@ -324,7 +354,7 @@ class ShieldMotionView @JvmOverloads constructor(
         canvas.drawPath(p, shardPaint)
     }
 
-    private fun drawSparkle(canvas: Canvas, x: Float, y: Float, size: Float, alpha: Float, tint: Int = color) {
+    private fun drawSparkle(canvas: Canvas, x: Float, y: Float, size: Float, alpha: Float, tint: Int = Color.WHITE) {
         if (alpha <= 0f) return
         sparklePaint.color = tint
         sparklePaint.alpha = (alpha * 255).toInt()

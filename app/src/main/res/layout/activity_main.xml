@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -40,7 +40,7 @@
                     android:textSize="28sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.04"
-                    android:textColor="?android:attr/textColorPrimary" />
+                    android:textColor="@color/custom_primary_text" />
 
                 <TextView
                     android:id="@+id/tagline"
@@ -49,7 +49,7 @@
                     android:layout_marginTop="3dp"
                     android:text="@string/tagline"
                     android:textSize="12sp"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    android:textColor="@color/custom_secondary_text" />
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
@@ -73,9 +73,9 @@
             android:layout_marginTop="24dp"
             app:cardCornerRadius="22dp"
             app:cardElevation="3dp"
-            app:cardBackgroundColor="?attr/colorSurface"
+            app:cardBackgroundColor="@color/custom_card_surface"
             app:strokeWidth="1dp"
-            app:strokeColor="?attr/colorControlActivated">
+            app:strokeColor="@color/custom_toggle_active">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -107,7 +107,7 @@
                         android:text="@string/status_off"
                         android:textSize="17sp"
                         android:textStyle="bold"
-                        android:textColor="?android:attr/textColorPrimary" />
+                        android:textColor="@color/custom_primary_text" />
 
                     <TextView
                         android:id="@+id/statusSub"
@@ -116,7 +116,7 @@
                         android:layout_marginTop="3dp"
                         android:text="@string/status_off_sub"
                         android:textSize="11sp"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="@color/custom_secondary_text" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/modeChip"
@@ -166,7 +166,7 @@
             android:layout_marginTop="16dp"
             app:cardCornerRadius="22dp"
             app:cardElevation="3dp"
-            app:cardBackgroundColor="?attr/colorSurface">
+            app:cardBackgroundColor="@color/custom_card_surface">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -183,14 +183,14 @@
                     android:text="0"
                     android:textSize="46sp"
                     android:textStyle="bold"
-                    android:textColor="?attr/colorPrimary" />
+                    android:textColor="@color/custom_primary_text" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/blocked_count"
                     android:textSize="12sp"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    android:textColor="@color/custom_secondary_text" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -202,7 +202,7 @@
             android:layout_marginTop="12dp"
             app:cardCornerRadius="22dp"
             app:cardElevation="2dp"
-            app:cardBackgroundColor="?attr/colorSurface">
+            app:cardBackgroundColor="@color/custom_card_surface">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -218,7 +218,7 @@
                     android:textSize="12sp"
                     android:maxLines="1"
                     android:ellipsize="end"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    android:textColor="@color/custom_secondary_text" />
 
                 <TextView
                     android:id="@+id/uptime"
@@ -227,7 +227,7 @@
                     android:layout_marginTop="7dp"
                     android:text="@string/uptime"
                     android:textSize="12sp"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    android:textColor="@color/custom_secondary_text" />
 
                 <TextView
                     android:id="@+id/listSize"
@@ -236,7 +236,7 @@
                     android:layout_marginTop="7dp"
                     android:text="@string/list_size"
                     android:textSize="12sp"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    android:textColor="@color/custom_secondary_text" />
 
                 <TextView
                     android:id="@+id/autoCount"
@@ -245,7 +245,7 @@
                     android:layout_marginTop="7dp"
                     android:text="@string/auto_count"
                     android:textSize="12sp"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    android:textColor="@color/custom_secondary_text" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -294,6 +294,6 @@
             android:text="@string/hint"
             android:textSize="11sp"
             android:gravity="center"
-            android:textColor="?android:attr/textColorSecondary" />
+            android:textColor="@color/custom_secondary_text" />
     </LinearLayout>
 </ScrollView>
