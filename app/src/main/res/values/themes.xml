@@ -1,25 +1,36 @@
 <resources>
-    <style name="Theme.AdBlocker" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/dark_accent</item>
-        <item name="colorOnPrimary">@color/dark_bg</item>
-        <item name="colorSecondary">@color/dark_primary</item>
-        <item name="android:colorBackground">@color/dark_bg</item>
-        <item name="colorSurface">@color/dark_surface</item>
-        <item name="colorOnSurface">@color/dark_text</item>
-        <item name="android:textColorPrimary">@color/dark_text</item>
-        <item name="android:textColorSecondary">@color/dark_text_secondary</item>
-        <item name="android:windowBackground">@color/dark_bg</item>
+    <!-- One fixed light theme: every color is explicit, nothing comes from the system. -->
+    <style name="Theme.AdBlocker" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/ink</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/ink</item>
+        <item name="colorOnPrimaryContainer">@color/white</item>
+        <item name="colorSecondary">@color/gold</item>
+        <item name="colorOnSecondary">@color/ink</item>
+        <item name="colorSurface">@color/white</item>
+        <item name="colorOnSurface">@color/ink</item>
+        <item name="colorSurfaceVariant">@color/card_muted</item>
+        <item name="colorOnSurfaceVariant">@color/ink_secondary</item>
+        <item name="colorOutline">@color/line</item>
+        <item name="colorControlNormal">@color/ink_tertiary</item>
+        <item name="colorControlActivated">@color/ink</item>
+        <item name="colorControlHighlight">@color/card_muted</item>
+        <item name="android:colorAccent">@color/gold</item>
+        <item name="android:colorBackground">@color/page_bg</item>
+        <item name="android:windowBackground">@color/page_bg</item>
+        <item name="android:textColorPrimary">@color/ink</item>
+        <item name="android:textColorSecondary">@color/ink_secondary</item>
+        <item name="android:textColorHint">@color/ink_tertiary</item>
+        <item name="android:statusBarColor">@color/page_bg</item>
+        <item name="android:navigationBarColor">@color/page_bg</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.AdBlocker.Dialog</item>
     </style>
 
-    <style name="Theme.AdBlocker.Light" parent="Theme.Material3.Light.NoActionBar">
-        <item name="colorPrimary">@color/light_accent</item>
-        <item name="colorOnPrimary">@color/light_bg</item>
-        <item name="colorSecondary">@color/light_primary</item>
-        <item name="android:colorBackground">@color/light_bg</item>
-        <item name="colorSurface">@color/light_surface</item>
-        <item name="colorOnSurface">@color/light_text</item>
-        <item name="android:textColorPrimary">@color/light_text</item>
-        <item name="android:textColorSecondary">@color/light_text_secondary</item>
-        <item name="android:windowBackground">@color/light_bg</item>
+    <style name="ThemeOverlay.AdBlocker.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">@color/white</item>
+        <item name="colorOnSurface">@color/ink</item>
+        <item name="colorPrimary">@color/ink</item>
     </style>
 </resources>

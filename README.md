@@ -22,8 +22,8 @@ Normal for side-loaded APKs (self-signed key, no Play Store reputation).
 - Rewarded ads may break rewards in some games.
 
 ## Features
-- Creamy gradient UI: dark default + light secondary.
-- Motion graphics: on START the button transforms into a rising shield with expanding protection rings; on STOP the bubble collapses and the shield cracks with a particle burst.
+- Fixed cream + black + gold design taken from the reference layout (no system/theme colors, single light theme).
+- Motion graphics: on START the shield rises with expanding protection rings and then **stays on screen** (gold shield + check); on STOP it cracks with a particle burst and settles as a grey shield. It never disappears or leaves only a glow.
 - Animated counter, status dot, pulsing glow.
 - Live info: last blocked domain, uptime, blocklist size.
 - Blocklist update from internet (StevenBlack hosts) with bundled fallback.

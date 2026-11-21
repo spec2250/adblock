@@ -1,28 +1,28 @@
 <resources>
-    <!-- Dark (default) creamy -->
-    <color name="dark_bg">#1C1814</color>
-    <color name="dark_surface">#2A241E</color>
-    <color name="dark_primary">#E8DCC8</color>
-    <color name="dark_accent">#D4A574</color>
-    <color name="dark_text">#F5EFE6</color>
-    <color name="dark_text_secondary">#B8A990</color>
-    <color name="dark_toggle_on">#7FA87F</color>
-    <color name="dark_toggle_off">#A87070</color>
-    <!-- Light creamy -->
-    <color name="light_bg">#F5EFE6</color>
-    <color name="light_surface">#FFFFFF</color>
-    <color name="light_primary">#3B2F24</color>
-    <color name="light_accent">#B8895A</color>
-    <color name="light_text">#2A241E</color>
-    <color name="light_text_secondary">#6B5A45</color>
-    <color name="light_toggle_on">#5F8F5F</color>
-    <color name="light_toggle_off">#9F5F5F</color>
-    <!-- Custom UI colors (replacing system attributes) -->
-    <color name="custom_primary_text">#F5EFE6</color>
-    <color name="custom_secondary_text">#B8A990</color>
-    <color name="custom_toggle_active">#7FA87F</color>
-    <color name="custom_toggle_inactive">#A87070</color>
-    <color name="custom_card_surface">#2A241E</color>
-    <color name="custom_button_bg">#D4A574</color>
-    <color name="custom_button_text">#1C1814</color>
+    <!-- Fixed palette taken from the reference design. Never use system colors. -->
+    <color name="page_bg">#F7F5F4</color>
+    <color name="white">#FFFFFF</color>
+    <color name="ink">#151515</color>
+    <color name="ink_secondary">#8B8783</color>
+    <color name="ink_tertiary">#B8B4B0</color>
+    <color name="card_muted">#F3F1F0</color>
+    <color name="line">#ECE9E7</color>
+
+    <color name="gold">#F6B400</color>
+    <color name="gold_soft">#FFD666</color>
+    <color name="gold_deep">#E39A00</color>
+
+    <color name="black_banner">#0F0F0F</color>
+    <color name="banner_muted">#9C9A97</color>
+    <color name="banner_line">#2A2A2A</color>
+
+    <color name="online_green">#2FBF71</color>
+    <color name="offline_red">#E05A5A</color>
+
+    <color name="shield_off">#6E6A66</color>
+    <color name="switch_off_track">#3A3A3A</color>
+    <color name="switch_off_thumb">#8C8C8C</color>
+
+    <color name="hero_top">#F0E4DE</color>
+    <color name="hero_bottom">#F7F5F4</color>
 </resources>

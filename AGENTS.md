@@ -20,8 +20,10 @@ without cutting the internet. Two modes:
 It blocks **automatically** — there is no manual block button. Unknown ad/tracking
 hostnames are recognised by a local heuristic and learned permanently.
 
-UI: creamy/gold Material 3, Arabic (RTL), a `MaterialSwitch` toggle, a custom shield
-motion graphic, and a **real phone notification** with a turn-on/turn-off action.
+UI: fixed cream/black/gold design (reference layout), Arabic (RTL), white pills,
+a black dashboard banner containing a **shield that is always visible** (gold + check
+when on, grey + crack when off), a `MaterialSwitch` toggle, and a **real phone
+notification** with a turn-on/turn-off action. No system/theme colors are used.
 
 ---
 
@@ -53,17 +55,19 @@ app/src/main/
 │   ├── UpdateManager.kt                  ← GitHub releases API → download → unzip → installer
 │   ├── boot/BootReceiver.kt              ← reboot auto-start (reads pref auto_start)
 │   ├── root/RootManager.kt               ← /system/etc/hosts patching between markers
-│   ├── ui/ShieldMotionView.kt            ← custom-canvas shield animation (enable/disable)
+│   ├── ui/ShieldMotionView.kt            ← custom-canvas shield: gold+check when on,
+│   │                                        grey+crack when off, NEVER hidden at rest
 │   └── vpn/
 │       ├── AdBlockVpnService.kt          ← THE engine: VPN, DNS interception, relay, notification
 │       └── DnsUtils.kt                   ← DNS question parser helpers
 └── res/
-    ├── layout/activity_main.xml          ← header, status card + MaterialSwitch, 200dp motion stage,
-    │                                        counter card, info card, progress, 2 action buttons
+    ├── layout/activity_main.xml          ← cream page, hero header, big title, white pills,
+    │                                        black banner + shield/switch/counter, 2x2 stat cards,
+    │                                        last-blocked card, update + whitelist buttons
     ├── layout/dialog_update.xml
     ├── drawable/ic_shield_notification.xml ← status-bar icon (alpha mask: outline shield + check)
     ├── values/strings.xml                ← ALL UI text is Arabic; add new strings here
-    ├── values/colors.xml · themes.xml    ← creamy palette, dark (default) + light theme
+    ├── values/colors.xml · themes.xml    ← FIXED palette + one light theme (no system colors)
     └── xml/provider_paths.xml            ← files-path update/
 ```
 
@@ -115,7 +119,6 @@ Support files: `app/build.gradle.kts`, `.github/workflows/build.yml`,
 |---|---|---|
 | `enabled` | bool | protection on/off (source of truth for the switch) |
 | `auto_start` | bool | start on boot |
-| `light_theme` | bool | theme |
 | `whitelist` | stringSet | user whitelist |
 | `auto_blocked` | stringSet | learned ad domains |
 | `blocklist_url` | string | list source |
@@ -197,6 +200,13 @@ touching `.github/workflows`). Ask the user for it — never store it in the rep
 - Don't touch `assets/blocklist.txt` (2.3 MB, known-good).
 - Don't remove the keystore cache/signing config (breaks in-app updates).
 - All user-facing text is **Arabic** in `strings.xml`; RTL must stay intact.
+- **UI colors only from `res/values/colors.xml`.** Never use `?android:attr/...`,
+  `?attr/...`, `android.R.color.*` or any system palette for the app surface.
+  The theme is a single fixed light theme (`Theme.AdBlocker`); do not reintroduce
+  a dark/light switcher.
+- **The shield must never be hidden.** After the enable animation it settles as a
+  gold shield with a dark check; when off it settles as a grey cracked shield.
+  `MainActivity` must keep `motion` visible and call `setRestingState(isOn)`.
 - **Never save text/XML files with a UTF-8 BOM.** AGP fails the build with
   `mismatched input '﻿'` / `Cannot read field "elmName" because "root" is null`.
   `tools/push.ps1` strips BOMs on upload and the workflow strips them again before

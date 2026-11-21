@@ -47,6 +47,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var glow: View
     private lateinit var motion: ShieldMotionView
     private lateinit var counterValue: TextView
+    private lateinit var blockedTotal: TextView
     private lateinit var lastBlocked: TextView
     private lateinit var uptime: TextView
     private lateinit var listSize: TextView
@@ -55,15 +56,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var progress: ProgressBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val prefs = getSharedPreferences("adblocker", MODE_PRIVATE)
-        val light = prefs.getBoolean("light_theme", false)
-        setTheme(if (light) R.style.Theme_AdBlocker_Light else R.style.Theme_AdBlocker)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        findViewById<View>(R.id.rootLayout).setBackgroundResource(
-            if (light) R.drawable.bg_gradient_light else R.drawable.bg_gradient_dark
-        )
+        styleSystemBars()
 
         statusText = findViewById(R.id.statusText)
         statusSub = findViewById(R.id.statusSub)
@@ -72,19 +67,24 @@ class MainActivity : AppCompatActivity() {
         protectionSwitch = findViewById(R.id.protectionSwitch)
         glow = findViewById(R.id.glow)
         motion = findViewById(R.id.motion)
-        motion.color = ContextCompat.getColor(this,
-            if (light) R.color.custom_toggle_active else R.color.dark_toggle_on)
-        motion.onColor = ContextCompat.getColor(this,
-            if (light) R.color.custom_toggle_active else R.color.dark_toggle_on)
-        motion.offColor = ContextCompat.getColor(this,
-            if (light) R.color.custom_toggle_inactive else R.color.dark_toggle_off)
         counterValue = findViewById(R.id.counterValue)
+        blockedTotal = findViewById(R.id.blockedTotal)
         lastBlocked = findViewById(R.id.lastBlocked)
         uptime = findViewById(R.id.uptime)
         listSize = findViewById(R.id.listSize)
         autoCount = findViewById(R.id.autoCount)
         updateButton = findViewById(R.id.updateButton)
         progress = findViewById(R.id.progress)
+
+        // Explicit fixed palette: the shield never turns into a bare glow.
+        motion.color = ContextCompat.getColor(this, R.color.gold)
+        motion.offColor = ContextCompat.getColor(this, R.color.shield_off)
+
+        isOn = getSharedPreferences("adblocker", MODE_PRIVATE).getBoolean("enabled", false)
+        motion.setRestingState(isOn)
+        setGlow(isOn)
+        refreshUi()
+        animateIn()
 
         // Root detection off the main thread.
         Thread {
@@ -96,21 +96,15 @@ class MainActivity : AppCompatActivity() {
             }
         }.start()
 
-        isOn = prefs.getBoolean("enabled", false)
-        setGlow(isOn)
-        refreshUi()
-        animateIn()
-
         protectionSwitch.setOnCheckedChangeListener { _, checked ->
             if (suppressSwitch || animating || checked == isOn) return@setOnCheckedChangeListener
             runMotionAndToggle(checked)
         }
         updateButton.setOnClickListener { checkUpdate(manual = true) }
         findViewById<View>(R.id.whitelistButton).setOnClickListener { showWhitelistDialog() }
-        findViewById<View>(R.id.themeButton).setOnClickListener {
-            prefs.edit().putBoolean("light_theme", !light).apply()
-            recreate()
-        }
+        findViewById<View>(R.id.whitelistIcon).setOnClickListener { showWhitelistDialog() }
+        findViewById<View>(R.id.avatarButton).setOnClickListener { showDetailsDialog() }
+        findViewById<View>(R.id.detailsButton).setOnClickListener { showDetailsDialog() }
 
         requestNotificationPermission()
         startUiLoop()
@@ -120,6 +114,25 @@ class MainActivity : AppCompatActivity() {
     // ---------------------------------------------------------------------
     // Smooth entrance / state animations
     // ---------------------------------------------------------------------
+
+    /**
+     * Keep system bar icons readable on the cream background. API 23/26 use
+     * dark icons; older versions get a black bar because they cannot invert.
+     */
+    private fun styleSystemBars() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            window.decorView.systemUiVisibility =
+                window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        } else {
+            window.statusBarColor = ContextCompat.getColor(this, R.color.ink)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            window.decorView.systemUiVisibility =
+                window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        } else {
+            window.navigationBarColor = ContextCompat.getColor(this, R.color.ink)
+        }
+    }
 
     private fun animateIn() {
         val density = resources.displayMetrics.density
@@ -157,9 +170,9 @@ class MainActivity : AppCompatActivity() {
         pulse = null
         if (active) {
             glow.animate().cancel()
-            glow.alpha = 0.25f
-            pulse = ObjectAnimator.ofFloat(glow, "alpha", 0.25f, 0.85f).apply {
-                duration = 1400
+            glow.alpha = 0.18f
+            pulse = ObjectAnimator.ofFloat(glow, "alpha", 0.18f, 0.60f).apply {
+                duration = 1600
                 repeatCount = ValueAnimator.INFINITE
                 repeatMode = ValueAnimator.REVERSE
                 start()
@@ -176,17 +189,15 @@ class MainActivity : AppCompatActivity() {
         animating = true
         protectionSwitch.isEnabled = false
         setGlow(false)
-        motion.alpha = 0f
         motion.visibility = View.VISIBLE
-        motion.animate().alpha(1f).setDuration(220).start()
         motion.play(enable) {
-            motion.animate().alpha(0f).setDuration(200).withEndAction {
-                motion.visibility = View.GONE
-                protectionSwitch.isEnabled = true
-                animating = false
-                setGlow(isOn)
-                refreshUi()
-            }.start()
+            protectionSwitch.isEnabled = true
+            animating = false
+            // Keep the full shield visible at rest - only the glow used to remain.
+            // Use the real state: the user may have denied the VPN permission.
+            motion.setRestingState(isOn)
+            setGlow(isOn)
+            refreshUi()
         }
         onToggle(enable)
     }
@@ -235,6 +246,7 @@ class MainActivity : AppCompatActivity() {
             startVpn()
         } else if (requestCode == 100) {
             setEnabled(false)
+            if (!animating) motion.setRestingState(false)
             Toast.makeText(this, getString(R.string.vpn_permission_needed), Toast.LENGTH_SHORT).show()
         }
     }
@@ -357,8 +369,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ---------------------------------------------------------------------
-    // Whitelist (kept so a broken app can be fixed in one tap)
+    // Details + whitelist (a broken app can still be fixed in one tap)
     // ---------------------------------------------------------------------
+
+    private fun showDetailsDialog() {
+        val status = getString(if (isOn) R.string.status_on else R.string.status_off)
+        val mode = getString(if (rootMode) R.string.mode_root else R.string.mode_vpn)
+        val count = if (rootMode) BlocklistManager.size() else AdBlockVpnService.blockedCount
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.details_title)
+            .setMessage(
+                getString(
+                    R.string.details_body,
+                    status,
+                    mode,
+                    count,
+                    BlocklistManager.size(),
+                    BlocklistManager.autoDetectedCount()
+                )
+            )
+            .setPositiveButton(R.string.done, null)
+            .show()
+    }
 
     private fun showWhitelistDialog() {
         val items = BlocklistManager.userWhitelist().toSortedSet().toList()
@@ -393,13 +425,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAddWhitelistDialog() {
-        val light = getSharedPreferences("adblocker", MODE_PRIVATE)
-            .getBoolean("light_theme", false)
         val input = EditText(this).apply {
             hint = "example.com"
             isSingleLine = true
-            setTextColor(ContextCompat.getColor(this@MainActivity,
-                if (light) android.R.color.black else android.R.color.white))
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.ink))
+            setHintTextColor(ContextCompat.getColor(this@MainActivity, R.color.ink_tertiary))
         }
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.whitelist_add)
@@ -443,8 +473,12 @@ class MainActivity : AppCompatActivity() {
         suppressSwitch = false
 
         val dot = statusDot.background as? GradientDrawable
-        dot?.setColor(ContextCompat.getColor(this,
-            if (isOn) android.R.color.holo_green_light else android.R.color.holo_red_light))
+        dot?.setColor(
+            ContextCompat.getColor(
+                this,
+                if (isOn) R.color.online_green else R.color.offline_red
+            )
+        )
 
         modeChip.text = getString(if (rootMode) R.string.mode_root else R.string.mode_vpn)
 
@@ -462,16 +496,16 @@ class MainActivity : AppCompatActivity() {
                 }.start()
             lastCount = count
         }
+        blockedTotal.text = count.toString()
 
         val domain = AdBlockVpnService.lastBlockedDomain
-        lastBlocked.text = if (domain.isNotEmpty())
-            "${getString(R.string.last_blocked)}: $domain" else getString(R.string.waiting)
+        lastBlocked.text = if (domain.isNotEmpty()) domain else getString(R.string.waiting)
 
         val secs = if (isOn && !rootMode && AdBlockVpnService.startedAt > 0)
             (System.currentTimeMillis() - AdBlockVpnService.startedAt) / 1000 else 0
-        uptime.text = "${getString(R.string.uptime)}: ${secs / 60}m ${secs % 60}s"
-        listSize.text = "${getString(R.string.list_size)}: ${BlocklistManager.size()}"
-        autoCount.text = "${getString(R.string.auto_count)}: ${BlocklistManager.autoDetectedCount()}"
+        uptime.text = if (secs > 0) "${secs / 60}m ${secs % 60}s" else "0m 0s"
+        listSize.text = BlocklistManager.size().toString()
+        autoCount.text = BlocklistManager.autoDetectedCount().toString()
     }
 
     private fun startUiLoop() {
@@ -495,12 +529,14 @@ class MainActivity : AppCompatActivity() {
             .getBoolean("enabled", isOn)
         if (prefOn != isOn) {
             setEnabled(prefOn)
+            motion.setRestingState(prefOn)
             return
         }
         if (isOn && !rootMode && !AdBlockVpnService.isRunning &&
             AdBlockVpnService.startedAt > 0L
         ) {
             setEnabled(false)
+            motion.setRestingState(false)
         }
     }
 

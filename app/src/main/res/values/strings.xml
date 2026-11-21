@@ -9,6 +9,27 @@
     <string name="toggle_off">إيقاف الحماية</string>
     <string name="blocked_count">إعلان تم حجبه</string>
 
+    <!-- New reference-design UI -->
+    <string name="status_label">الحالة</string>
+    <string name="banner_label">الإعلانات المحجوبة</string>
+    <string name="view_all">عرض الكل</string>
+    <string name="chip_protection">🛡️ الحماية</string>
+    <string name="chip_auto">🤖 تلقائي</string>
+    <string name="chip_all_apps">📱 كل التطبيقات</string>
+    <string name="stats_blocked">إعلان محجوب</string>
+    <string name="stats_blocked_sub">الإجمالي</string>
+    <string name="stats_domains">نطاق محجوب</string>
+    <string name="stats_domains_sub">قائمة القواعد</string>
+    <string name="stats_uptime">مدة التشغيل</string>
+    <string name="stats_uptime_sub">هذه الجلسة</string>
+    <string name="stats_auto">اكتشاف تلقائي</string>
+    <string name="stats_auto_sub">Auto</string>
+    <string name="last_blocked_title">آخر نطاق محجوب</string>
+    <string name="live_badge">مباشر</string>
+    <string name="protection_label">الحماية</string>
+    <string name="details_title">تفاصيل الحماية</string>
+    <string name="details_body">الحالة: %1$s\nالوضع: %2$s\nالإعلانات المحجوبة: %3$d\nنطاقات القائمة: %4$d\nمكتشفة تلقائياً: %5$d</string>
+
     <string name="mode_root">وضع Root</string>
     <string name="mode_vpn">وضع VPN</string>
 
@@ -18,6 +39,7 @@
     <string name="up_to_date">أنت تستخدم أحدث إصدار</string>
     <string name="check_failed">تعذّر التحقق — تحقق من الاتصال</string>
     <string name="update_available">يتوفر تحديث جديد</string>
+    <string name="update_badge">✨ نسخة جديدة</string>
     <string name="update_notes_default">تحسينات في الأداء والواجهة وإصلاحات.</string>
     <string name="update_now">تحديث الآن</string>
     <string name="later">لاحقاً</string>
