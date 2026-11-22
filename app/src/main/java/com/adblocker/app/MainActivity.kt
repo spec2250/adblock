@@ -47,6 +47,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var glow: View
     private lateinit var motion: ShieldMotionView
     private lateinit var counterValue: TextView
+    private lateinit var protectionLabel: TextView
     private lateinit var blockedTotal: TextView
     private lateinit var lastBlocked: TextView
     private lateinit var uptime: TextView
@@ -67,6 +68,7 @@ class MainActivity : AppCompatActivity() {
         glow = findViewById(R.id.glow)
         motion = findViewById(R.id.motion)
         counterValue = findViewById(R.id.counterValue)
+        protectionLabel = findViewById(R.id.protectionLabel)
         blockedTotal = findViewById(R.id.blockedTotal)
         lastBlocked = findViewById(R.id.lastBlocked)
         uptime = findViewById(R.id.uptime)
@@ -417,9 +419,15 @@ class MainActivity : AppCompatActivity() {
     private fun refreshUi() {
         crossfade(statusText, getString(if (isOn) R.string.status_on else R.string.status_off))
         crossfade(statusSub, getString(if (isOn) R.string.status_on_sub else R.string.status_off_sub))
+        crossfade(
+            protectionLabel,
+            getString(if (isOn) R.string.protection_running else R.string.protection_stopped)
+        )
 
         suppressSwitch = true
         protectionSwitch.isChecked = isOn
+        protectionSwitch.contentDescription =
+            getString(if (isOn) R.string.toggle_off else R.string.toggle_on)
         suppressSwitch = false
 
         val count = if (rootMode) BlocklistManager.size().toLong() else AdBlockVpnService.blockedCount
@@ -440,6 +448,9 @@ class MainActivity : AppCompatActivity() {
 
         val domain = AdBlockVpnService.lastBlockedDomain
         lastBlocked.text = if (domain.isNotEmpty()) domain else getString(R.string.waiting)
+        lastBlocked.setTextColor(
+            ContextCompat.getColor(this, if (isOn) R.color.ink else R.color.ink_secondary)
+        )
 
         val secs = if (isOn && !rootMode && AdBlockVpnService.startedAt > 0)
             (System.currentTimeMillis() - AdBlockVpnService.startedAt) / 1000 else 0

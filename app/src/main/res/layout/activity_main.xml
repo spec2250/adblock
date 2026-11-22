@@ -203,10 +203,11 @@
                                 app:trackTint="@color/switch_track" />
 
                             <TextView
+                                android:id="@+id/protectionLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="6dp"
-                                android:text="@string/protection_label"
+                                android:text="@string/protection_stopped"
                                 android:textSize="12sp"
                                 android:textColor="@color/on_banner" />
                         </LinearLayout>

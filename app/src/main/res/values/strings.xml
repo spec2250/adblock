@@ -27,6 +27,8 @@
     <string name="last_blocked_title">آخر نطاق محجوب</string>
     <string name="live_badge">مباشر</string>
     <string name="protection_label">الحماية</string>
+    <string name="protection_running">تشغيل</string>
+    <string name="protection_stopped">إيقاف</string>
     <string name="theme_dark">تفعيل الوضع الليلي</string>
     <string name="theme_light">تفعيل الوضع النهاري</string>
     <string name="details_title">تفاصيل الحماية</string>

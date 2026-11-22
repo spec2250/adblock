@@ -57,6 +57,14 @@ class ShieldMotionView @JvmOverloads constructor(
     /** True when no animation is running and the shield is shown at rest. */
     private var resting = true
     private var restingEnabled = false
+    private var restingProgress = 0f
+    private var restingAnimator: ValueAnimator? = null
+    private val previewOuterPath = createPreviewShieldPath(false)
+    private val previewInnerPath = createPreviewShieldPath(true)
+    private val previewSplitPath = createPreviewSplitPath()
+    private val previewCrackPath = createPreviewCrackPath()
+    private val previewCrackMeasure = android.graphics.PathMeasure(previewCrackPath, false)
+    private val previewOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     // ==================== PAINTS ====================
     private val auraPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -143,10 +151,14 @@ class ShieldMotionView @JvmOverloads constructor(
         restingEnabled = enabled
         resting = true
         progress = 1f
+        restingProgress = 0f
+        startRestingAnimation()
         invalidate()
     }
 
     fun play(enable: Boolean, onEnd: () -> Unit) {
+        restingAnimator?.cancel()
+        restingAnimator = null
         animator?.cancel()
         enabling = enable
         resting = false
@@ -157,6 +169,42 @@ class ShieldMotionView @JvmOverloads constructor(
             interpolator = DecelerateInterpolator(1.6f)
             addUpdateListener {
                 progress = it.animatedValue as Float
+                invalidate()
+            }
+            start()
+        }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        startRestingAnimation()
+    }
+
+    override fun onDetachedFromWindow() {
+        restingAnimator?.cancel()
+        restingAnimator = null
+        animator?.cancel()
+        animator = null
+        super.onDetachedFromWindow()
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        if (visibility == VISIBLE) {
+            startRestingAnimation()
+        } else {
+            restingAnimator?.cancel()
+            restingAnimator = null
+        }
+    }
+
+    private fun startRestingAnimation() {
+        if (!resting || !isAttachedToWindow || restingAnimator != null) return
+        restingAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 3800L
+            repeatCount = ValueAnimator.INFINITE
+            addUpdateListener {
+                restingProgress = it.animatedValue as Float
                 invalidate()
             }
             start()
@@ -291,35 +339,192 @@ class ShieldMotionView @JvmOverloads constructor(
     // ------------------------------------------------------------------
 
     private fun drawResting(canvas: Canvas, cx: Float, cy: Float, r: Float, enabled: Boolean) {
-        val accent = if (enabled) color else offColor
-
-        // soft aura so the shield sits on the black banner without a plate
-        (if (enabled) auraShaderOn else auraShaderOff)?.let {
-            auraPaint.shader = it
-            auraPaint.alpha = if (enabled) 230 else 120
-            canvas.drawCircle(cx, cy, r * 1.85f, auraPaint)
+        if (!enabled) {
+            drawBrokenRestingShield(canvas, cx, cy)
+            return
         }
 
-        // static dotted orbit
+        val accent = color
+
+        val breathe = (0.5f + 0.5f * sin(restingProgress * 2f * PI.toFloat()))
+        val auraScale = 0.96f + 0.10f * breathe
+        (auraShaderOn)?.let {
+            auraPaint.shader = it
+            auraPaint.alpha = (185f + 60f * breathe).toInt()
+            canvas.drawCircle(cx, cy, r * 1.85f * auraScale, auraPaint)
+        }
+
+        // The preview's running shield gently breathes behind the persistent check.
         for (i in 0 until 32) {
             val a = (i * 11.25) * PI / 180.0 - PI / 2.0
             val d = r * 1.32f
             dotPaint.color = accent
-            dotPaint.alpha = if (i % 4 == 0) 140 else 50
+            dotPaint.alpha = if (i % 4 == 0) (105f + 55f * breathe).toInt() else 35
             val size = if (i % 4 == 0) 2.9f else 1.6f
             canvas.drawCircle((cx + cos(a) * d).toFloat(), (cy + sin(a) * d).toFloat(), size, dotPaint)
         }
 
-        drawShield(canvas, cx, cy, r, 1f, enabled)
+        val scale = 0.98f + 0.035f * breathe
+        canvas.save()
+        canvas.scale(scale, scale, cx, cy)
+        drawShield(canvas, cx, cy, r, 1f, true)
+        drawCheck(canvas, cx, cy, r, 1f)
+        drawSparkle(canvas, cx - r * 1.42f, cy - r * 0.35f, 8f, 0.35f + 0.45f * breathe, rayColor)
+        drawSparkle(canvas, cx + r * 1.42f, cy + r * 0.30f, 7f, 0.25f + 0.35f * (1f - breathe), rayColor)
+        canvas.restore()
+    }
 
-        if (enabled) {
-            drawCheck(canvas, cx, cy, r, 1f)
-            // tiny sparkles at the sides for a premium touch
-            drawSparkle(canvas, cx - r * 1.42f, cy - r * 0.35f, 8f, 0.6f, rayColor)
-            drawSparkle(canvas, cx + r * 1.42f, cy + r * 0.30f, 7f, 0.45f, rayColor)
-        } else {
-            drawCrack(canvas, cx, cy, r, 1f, 1f)
+    private fun drawBrokenRestingShield(canvas: Canvas, cx: Float, cy: Float) {
+        val scale = minOf(width.toFloat(), height.toFloat()) / 320f
+        val leftOffset = -12f * scale * brokenPieceProgress()
+        val rightOffset = -leftOffset
+        val breathe = (0.5f + 0.5f * sin(restingProgress * 2f * PI.toFloat()))
+        auraPaint.shader = auraShaderOn
+        auraPaint.alpha = (135f + 70f * breathe).toInt()
+        canvas.drawCircle(cx, cy, minOf(width, height) * 0.58f, auraPaint)
+
+        val base = canvas.save()
+        canvas.translate(cx - 160f * scale, cy - 160f * scale)
+        canvas.scale(scale, scale)
+
+        drawPreviewPiece(canvas, leftOffset, true, false)
+        drawPreviewPiece(canvas, rightOffset, false, false)
+        drawPreviewPiece(canvas, leftOffset, true, true)
+        drawPreviewPiece(canvas, rightOffset, false, true)
+
+        val crackT = brokenCrackProgress()
+        if (crackT > 0f) {
+            val length = previewCrackMeasure.length
+            crackPaint.pathEffect = android.graphics.DashPathEffect(
+                floatArrayOf(length * crackT, length * (1f - crackT) + 1f), 0f
+            )
+            crackPaint.color = 0xFFFFD666.toInt()
+            crackPaint.strokeWidth = 3.5f
+            crackPaint.alpha = (230f * crackT).toInt()
+            crackPaint.setShadowLayer(5f, 0f, 0f, 0xFFF6B400.toInt())
+            canvas.drawPath(previewCrackPath, crackPaint)
+            crackPaint.clearShadowLayer()
+            crackPaint.pathEffect = null
         }
+        canvas.restoreToCount(base)
+    }
+
+    private fun drawPreviewPiece(
+        canvas: Canvas,
+        offset: Float,
+        left: Boolean,
+        sweep: Boolean
+    ) {
+        val save = canvas.save()
+        canvas.translate(offset, 0f)
+        canvas.clipPath(
+            previewSplitPath,
+            if (left) android.graphics.Region.Op.INTERSECT else android.graphics.Region.Op.DIFFERENCE
+        )
+
+        val outline = previewOutlinePaint
+        outline.style = Paint.Style.STROKE
+        outline.strokeWidth = if (sweep) 8f else 10f
+        outline.strokeJoin = Paint.Join.ROUND
+        outline.strokeCap = Paint.Cap.ROUND
+        outline.color = color
+        if (sweep) {
+            val phase = restingProgress
+            outline.shader = LinearGradient(
+                -320f + phase * 640f, 0f,
+                -248f + phase * 640f, 320f,
+                intArrayOf(0x00FFD666, 0x40FFD666, 0xE6FFF4CC.toInt(), 0x40FFD666, 0x00FFD666),
+                floatArrayOf(0f, 0.42f, 0.52f, 0.62f, 1f),
+                Shader.TileMode.CLAMP
+            )
+            outline.setShadowLayer(5f, 0f, 0f, 0xBFF6B400.toInt())
+        } else {
+            outline.shader = LinearGradient(
+                0f, 0f, 320f, 320f,
+                intArrayOf(0xFFFFD666.toInt(), 0xFFE39A00.toInt()),
+                null,
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawPath(previewOuterPath, outline)
+        canvas.drawPath(previewInnerPath, outline)
+        outline.clearShadowLayer()
+        canvas.restoreToCount(save)
+    }
+
+    private fun brokenPieceProgress(): Float {
+        val p = restingProgress
+        return when {
+            p < 0.44f -> 0f
+            p < 0.60f -> (p - 0.44f) / 0.16f
+            p < 0.78f -> 1f
+            p < 0.94f -> 1f - (p - 0.78f) / 0.16f
+            else -> 0f
+        }
+    }
+
+    private fun brokenCrackProgress(): Float {
+        val p = restingProgress
+        return when {
+            p < 0.08f || p >= 0.84f -> 0f
+            p < 0.34f -> (p - 0.08f) / 0.26f
+            p < 0.72f -> 1f
+            else -> 1f - (p - 0.72f) / 0.12f
+        }
+    }
+
+    private fun createPreviewShieldPath(inner: Boolean): Path = Path().apply {
+        if (inner) {
+            moveTo(160f, 66f)
+            cubicTo(126f, 66f, 98f, 75f, 82f, 86f)
+            lineTo(82f, 158f)
+            cubicTo(82f, 185f, 92f, 204f, 112f, 219f)
+            lineTo(160f, 255f)
+            lineTo(208f, 219f)
+            cubicTo(228f, 204f, 238f, 185f, 238f, 158f)
+            lineTo(238f, 86f)
+            cubicTo(222f, 75f, 194f, 66f, 160f, 66f)
+        } else {
+            moveTo(160f, 38f)
+            cubicTo(122f, 38f, 88f, 49f, 63f, 65f)
+            lineTo(63f, 159f)
+            cubicTo(63f, 192f, 76f, 215f, 99f, 234f)
+            lineTo(160f, 280f)
+            lineTo(221f, 234f)
+            cubicTo(244f, 215f, 257f, 192f, 257f, 159f)
+            lineTo(257f, 65f)
+            cubicTo(232f, 49f, 198f, 38f, 160f, 38f)
+        }
+        close()
+    }
+
+    private fun createPreviewSplitPath(): Path = Path().apply {
+        moveTo(160f, 0f)
+        lineTo(160f, 67f)
+        lineTo(149f, 91f)
+        lineTo(169f, 111f)
+        lineTo(150f, 134f)
+        lineTo(169f, 155f)
+        lineTo(150f, 177f)
+        lineTo(169f, 198f)
+        lineTo(150f, 220f)
+        lineTo(160f, 252f)
+        lineTo(160f, 320f)
+        lineTo(0f, 320f)
+        lineTo(0f, 0f)
+        close()
+    }
+
+    private fun createPreviewCrackPath(): Path = Path().apply {
+        moveTo(160f, 67f)
+        lineTo(149f, 91f)
+        lineTo(169f, 111f)
+        lineTo(150f, 134f)
+        lineTo(169f, 155f)
+        lineTo(150f, 177f)
+        lineTo(169f, 198f)
+        lineTo(150f, 220f)
+        lineTo(160f, 252f)
     }
 
     private fun absSin(v: Float): Float = abs(sin(v.toDouble())).toFloat()
