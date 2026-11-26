@@ -25,8 +25,6 @@ class ShieldMotionView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    var color: Int = GOLD
-
     private var enabled = false
     private var running = false
     private var progress = 0f
@@ -47,13 +45,6 @@ class ShieldMotionView @JvmOverloads constructor(
         style = Paint.Style.STROKE
         strokeJoin = Paint.Join.ROUND
         strokeCap = Paint.Cap.ROUND
-    }
-    private val checkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        color = 0xFF151515.toInt()
-        strokeWidth = 12f
-        strokeCap = Paint.Cap.ROUND
-        strokeJoin = Paint.Join.ROUND
     }
     private val crackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -86,14 +77,6 @@ class ShieldMotionView @JvmOverloads constructor(
         lineTo(238f, 86f)
         cubicTo(222f, 75f, 194f, 66f, 160f, 66f)
         close()
-    }
-    private val activeOuterPath = shieldContour(38f, 63f, 257f, 280f)
-    private val activeMiddlePath = shieldContour(63f, 84f, 236f, 258f)
-    private val activeInnerPath = shieldContour(87f, 103f, 217f, 236f)
-    private val checkPath = Path().apply {
-        moveTo(93f, 147f)
-        lineTo(158f, 211f)
-        lineTo(266f, 91f)
     }
     private val crackPath = Path().apply {
         moveTo(160f, 67f)
@@ -247,46 +230,8 @@ class ShieldMotionView @JvmOverloads constructor(
         canvas.drawCircle(160f, 160f, 160f, auraPaint)
         canvas.restore()
 
-        if (enabled) {
-            drawActiveShield(canvas, breathe)
-        } else {
+        if (!enabled) {
             drawBrokenShield(canvas, cycle)
-        }
-        canvas.restore()
-    }
-
-    private fun drawActiveShield(canvas: Canvas, breathe: Float) {
-        val appear = if (running) ((progress - 0.08f) / 0.42f).coerceIn(0f, 1f) else 1f
-        val breathingScale = 0.98f + 0.035f * breathe
-        val scale = (0.72f + 0.28f * appear) * breathingScale
-        canvas.save()
-        canvas.scale(scale, scale, 160f, 160f)
-
-        outlinePaint.shader = LinearGradient(
-            64f, 38f, 256f, 280f,
-            intArrayOf(0xFFFFD666.toInt(), color, 0xFFE39A00.toInt()),
-            floatArrayOf(0f, 0.55f, 1f),
-            Shader.TileMode.CLAMP
-        )
-        outlinePaint.strokeWidth = 11f
-        outlinePaint.alpha = (255f * appear).toInt()
-        outlinePaint.setShadowLayer(18f, 0f, 8f, 0x2EF6B400)
-        canvas.drawPath(activeOuterPath, outlinePaint)
-        canvas.drawPath(activeMiddlePath, outlinePaint)
-        canvas.drawPath(activeInnerPath, outlinePaint)
-        outlinePaint.clearShadowLayer()
-        outlinePaint.shader = null
-
-        val checkProgress = if (running) ((progress - 0.42f) / 0.36f).coerceIn(0f, 1f) else 1f
-        if (checkProgress > 0f) {
-            val length = PathMeasure(checkPath, false).length
-            checkPaint.pathEffect = DashPathEffect(
-                floatArrayOf(length * checkProgress, length * (1f - checkProgress) + 1f),
-                0f
-            )
-            checkPaint.alpha = (255f * appear).toInt()
-            canvas.drawPath(checkPath, checkPaint)
-            checkPaint.pathEffect = null
         }
         canvas.restore()
     }
@@ -374,20 +319,6 @@ class ShieldMotionView @JvmOverloads constructor(
         outlinePaint.shader = null
         canvas.restoreToCount(save)
     }
-
-    private fun shieldContour(top: Float, left: Float, right: Float, bottom: Float) =
-        Path().apply {
-            val center = (left + right) / 2f
-            moveTo(center, top)
-            cubicTo(center - 38f, top, left + 10f, top + 11f, left, top + 27f)
-            lineTo(left, top + 94f)
-            cubicTo(left, top + 127f, left + 13f, top + 150f, left + 36f, top + 169f)
-            lineTo(center, bottom)
-            lineTo(right - 36f, top + 169f)
-            cubicTo(right - 13f, top + 150f, right, top + 127f, right, top + 94f)
-            lineTo(right, top + 27f)
-            cubicTo(right - 25f, top + 11f, center + 38f, top, center, top)
-        }
 
     private companion object {
         val GOLD: Int = 0xFFF6B400.toInt()

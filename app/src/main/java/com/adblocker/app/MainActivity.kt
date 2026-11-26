@@ -14,6 +14,7 @@ import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -21,7 +22,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.android.material.card.MaterialCardView
 import com.adblocker.app.root.RootManager
+import com.adblocker.app.ui.ShieldGifView
 import com.adblocker.app.ui.ShieldMotionView
 import com.adblocker.app.vpn.AdBlockVpnService
 import com.google.android.material.button.MaterialButton
@@ -42,6 +45,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var themeButton: ImageButton
     private lateinit var protectionSwitch: MaterialSwitch
     private lateinit var motion: ShieldMotionView
+    private lateinit var shieldGif: ShieldGifView
     private lateinit var counterValue: TextView
     private lateinit var protectionLabel: TextView
     private lateinit var blockedTotal: TextView
@@ -62,6 +66,7 @@ class MainActivity : AppCompatActivity() {
         themeButton = findViewById(R.id.themeButton)
         protectionSwitch = findViewById(R.id.protectionSwitch)
         motion = findViewById(R.id.motion)
+        shieldGif = findViewById(R.id.shieldGif)
         counterValue = findViewById(R.id.counterValue)
         protectionLabel = findViewById(R.id.protectionLabel)
         blockedTotal = findViewById(R.id.blockedTotal)
@@ -71,9 +76,6 @@ class MainActivity : AppCompatActivity() {
         autoCount = findViewById(R.id.autoCount)
         updateButton = findViewById(R.id.updateButton)
         progress = findViewById(R.id.progress)
-
-        // Keep the shield palette independent of the system theme.
-        motion.color = ContextCompat.getColor(this, R.color.gold)
 
         isOn = getSharedPreferences("adblocker", MODE_PRIVATE).getBoolean("enabled", false)
         motion.setRestingState(isOn)
@@ -193,7 +195,6 @@ class MainActivity : AppCompatActivity() {
     private fun runMotionAndToggle(enable: Boolean) {
         animating = true
         protectionSwitch.isEnabled = false
-        motion.visibility = View.VISIBLE
         motion.play(enable) {
             protectionSwitch.isEnabled = true
             animating = false
@@ -219,6 +220,7 @@ class MainActivity : AppCompatActivity() {
                         showProgress(false)
                         if (!ok) {
                             setEnabled(false)
+                            settleShieldMotion(false)
                             Toast.makeText(this, getString(R.string.root_not_available), Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -247,9 +249,17 @@ class MainActivity : AppCompatActivity() {
             startVpn()
         } else if (requestCode == 100) {
             setEnabled(false)
-            if (!animating) motion.setRestingState(false)
+            settleShieldMotion(false)
             Toast.makeText(this, getString(R.string.vpn_permission_needed), Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun settleShieldMotion(enabled: Boolean) {
+        if (animating) {
+            animating = false
+            protectionSwitch.isEnabled = true
+        }
+        motion.setRestingState(enabled)
     }
 
     private fun startVpn() {
@@ -327,8 +337,8 @@ class MainActivity : AppCompatActivity() {
     private fun showUpdateDialog(rel: UpdateManager.Release) {
         val view = layoutInflater.inflate(R.layout.dialog_update, null)
         view.findViewById<TextView>(R.id.updateName).text = rel.name
-        view.findViewById<TextView>(R.id.updateNotes).text =
-            rel.notes.ifBlank { getString(R.string.update_notes_default) }
+        val notes = rel.notes.ifBlank { getString(R.string.update_notes_default) }
+        renderReleaseNotes(view.findViewById(R.id.updateNotesList), notes)
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.update_available)
             .setView(view)
@@ -336,6 +346,147 @@ class MainActivity : AppCompatActivity() {
             .setNegativeButton(R.string.later, null)
             .show()
     }
+
+    private data class ReleaseNoteBlock(
+        val text: String,
+        val heading: Boolean = false,
+        val bullet: Boolean = false
+    )
+
+    private fun renderReleaseNotes(container: LinearLayout, notes: String) {
+        container.removeAllViews()
+        val blocks = parseReleaseNotes(notes)
+        for (block in blocks) {
+            if (block.heading) {
+                val heading = TextView(this).apply {
+                    text = block.text
+                    textSize = 14f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.ink))
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        topMargin = dp(8)
+                        bottomMargin = dp(6)
+                    }
+                }
+                container.addView(heading)
+                continue
+            }
+
+            val card = MaterialCardView(this).apply {
+                radius = dp(14).toFloat()
+                cardElevation = 0f
+                setCardBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.surface))
+                strokeWidth = dp(1)
+                setStrokeColor(ContextCompat.getColor(this@MainActivity, R.color.line))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = dp(8) }
+            }
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+            }
+            if (block.bullet) {
+                row.addView(View(this).apply {
+                    setBackgroundResource(R.drawable.bg_circle_muted)
+                    backgroundTintList = android.content.res.ColorStateList.valueOf(
+                        ContextCompat.getColor(this@MainActivity, R.color.gold)
+                    )
+                    layoutParams = LinearLayout.LayoutParams(dp(6), dp(6)).apply {
+                        marginEnd = dp(10)
+                    }
+                })
+            }
+            row.addView(TextView(this).apply {
+                text = block.text
+                textSize = 13f
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.ink_secondary))
+                setLineSpacing(dp(2).toFloat(), 1f)
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            card.addView(row)
+            container.addView(card)
+        }
+    }
+
+    private fun parseReleaseNotes(notes: String): List<ReleaseNoteBlock> {
+        val blocks = mutableListOf<ReleaseNoteBlock>()
+        val paragraph = StringBuilder()
+
+        fun flushParagraph() {
+            val text = cleanReleaseNoteText(paragraph.toString().trim())
+            if (text.isNotEmpty()) blocks += ReleaseNoteBlock(text)
+            paragraph.setLength(0)
+        }
+
+        for (line in notes.lines()) {
+            val trimmed = line.trim()
+            if (trimmed.isEmpty()) {
+                flushParagraph()
+                continue
+            }
+            val heading = Regex("^#{1,6}\\s+(.+)$").matchEntire(trimmed)
+            if (heading != null) {
+                flushParagraph()
+                cleanReleaseNoteText(heading.groupValues[1])
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { blocks += ReleaseNoteBlock(it, heading = true) }
+                continue
+            }
+            val bullet = Regex("^(?:[-*+]\\s+|•\\s+)(.+)$").matchEntire(trimmed)
+            val numbered = Regex("^\\d+[.)]\\s+(.+)$").matchEntire(trimmed)
+            val listItem = bullet ?: numbered
+            if (listItem != null) {
+                flushParagraph()
+                cleanReleaseNoteText(listItem.groupValues[1])
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { blocks += ReleaseNoteBlock(it, bullet = true) }
+                continue
+            }
+            if (paragraph.isNotEmpty()) paragraph.append(' ')
+            paragraph.append(trimmed)
+        }
+        flushParagraph()
+        return blocks
+    }
+
+    private fun cleanReleaseNoteText(text: String): String {
+        var clean = text
+        clean = Regex("""\[([^\]]+)\]\(([^)]+)\)""").replace(clean, "$1")
+        for ((pattern, replacement) in listOf(
+            Regex("\\*\\*(.+?)\\*\\*") to "$1",
+            Regex("__(.+?)__") to "$1",
+            Regex("\\*(.+?)\\*") to "$1",
+            Regex("_(.+?)_") to "$1",
+            Regex("~~(.+?)~~") to "$1",
+            Regex("`([^`]+)`") to "$1"
+        )) {
+            clean = pattern.replace(clean, replacement)
+        }
+
+        val withoutEmoji = StringBuilder()
+        var index = 0
+        while (index < clean.length) {
+            val codePoint = clean.codePointAt(index)
+            index += Character.charCount(codePoint)
+            val isEmojiSymbol = Character.getType(codePoint) == Character.OTHER_SYMBOL.toInt()
+            val isEmojiModifier = codePoint in 0x1F3FB..0x1F3FF
+            val isEmojiJoiner = codePoint == 0x200D || codePoint == 0xFE0E ||
+                codePoint == 0xFE0F || codePoint == 0x20E3
+            if (!isEmojiSymbol && !isEmojiModifier && !isEmojiJoiner) {
+                withoutEmoji.appendCodePoint(codePoint)
+            }
+        }
+        return withoutEmoji.toString().trim()
+    }
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density + 0.5f).toInt()
 
     private fun startDownload(url: String) {
         Toast.makeText(this, getString(R.string.downloading), Toast.LENGTH_SHORT).show()
@@ -385,6 +536,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshUi() {
+        syncShieldViews()
         crossfade(statusText, getString(if (isOn) R.string.status_on else R.string.status_off))
         crossfade(statusSub, getString(if (isOn) R.string.status_on_sub else R.string.status_off_sub))
         crossfade(
@@ -425,6 +577,13 @@ class MainActivity : AppCompatActivity() {
         uptime.text = if (secs > 0) "${secs / 60}m ${secs % 60}s" else "0m 0s"
         listSize.text = BlocklistManager.size().toString()
         autoCount.text = BlocklistManager.autoDetectedCount().toString()
+    }
+
+    private fun syncShieldViews() {
+        val active = isOn
+        shieldGif.visibility = if (active) View.VISIBLE else View.GONE
+        shieldGif.setAnimating(active)
+        motion.visibility = if (active) View.GONE else View.VISIBLE
     }
 
     private fun startUiLoop() {

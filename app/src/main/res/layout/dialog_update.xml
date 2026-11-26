@@ -22,13 +22,18 @@
         android:textSize="16sp"
         android:textColor="@color/ink" />
 
-    <TextView
+    <ScrollView
         android:id="@+id/updateNotes"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="240dp"
         android:layout_marginTop="12dp"
-        android:textSize="13sp"
-        android:maxLines="6"
-        android:scrollbars="vertical"
-        android:textColor="@color/ink_secondary" />
+        android:fillViewport="false"
+        android:scrollbars="vertical">
+
+        <LinearLayout
+            android:id="@+id/updateNotesList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
 </LinearLayout>

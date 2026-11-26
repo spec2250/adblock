@@ -43,7 +43,7 @@
     <string name="up_to_date">أنت تستخدم أحدث إصدار</string>
     <string name="check_failed">تعذّر التحقق — تحقق من الاتصال</string>
     <string name="update_available">يتوفر تحديث جديد</string>
-    <string name="update_badge">✨ نسخة جديدة</string>
+    <string name="update_badge">إصدار جديد</string>
     <string name="update_notes_default">تحسينات في الأداء والواجهة وإصلاحات.</string>
     <string name="update_now">تحديث الآن</string>
     <string name="later">لاحقاً</string>

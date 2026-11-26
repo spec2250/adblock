@@ -136,12 +136,21 @@
 
                     <FrameLayout
                         android:layout_width="126dp"
-                        android:layout_height="152dp">
+                        android:layout_height="152dp"
+                        android:clipChildren="false">
 
                         <com.adblocker.app.ui.ShieldMotionView
                             android:id="@+id/motion"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent" />
+
+                        <com.adblocker.app.ui.ShieldGifView
+                            android:id="@+id/shieldGif"
+                            android:layout_width="132dp"
+                            android:layout_height="132dp"
+                            android:layout_gravity="center"
+                            android:contentDescription="@null"
+                            android:visibility="gone" />
                     </FrameLayout>
 
                     <LinearLayout
