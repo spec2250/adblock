@@ -583,7 +583,8 @@ class MainActivity : AppCompatActivity() {
         val active = isOn
         shieldGif.visibility = if (active) View.VISIBLE else View.GONE
         shieldGif.setAnimating(active)
-        motion.visibility = if (active) View.GONE else View.VISIBLE
+        // Keep the aura behind the active GIF; the motion view draws the crack only when off.
+        motion.visibility = View.VISIBLE
     }
 
     private fun startUiLoop() {

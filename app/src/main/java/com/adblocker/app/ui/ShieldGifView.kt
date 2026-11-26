@@ -32,16 +32,6 @@ class ShieldGifView @JvmOverloads constructor(
                 )
             )
         )
-        setShadowLayer(
-            18f * resources.displayMetrics.density,
-            0f,
-            8f * resources.displayMetrics.density,
-            0x2EF6B400
-        )
-    }
-
-    init {
-        setLayerType(LAYER_TYPE_SOFTWARE, null)
     }
 
     fun setAnimating(enabled: Boolean) {
