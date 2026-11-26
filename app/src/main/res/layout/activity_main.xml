@@ -138,13 +138,6 @@
                         android:layout_width="126dp"
                         android:layout_height="152dp">
 
-                        <View
-                            android:id="@+id/glow"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:alpha="0"
-                            android:background="@drawable/glow" />
-
                         <com.adblocker.app.ui.ShieldMotionView
                             android:id="@+id/motion"
                             android:layout_width="match_parent"

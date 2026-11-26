@@ -19,6 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Prepare release notes from commit message
+        run: |
+          git log -1 --pretty=%B | sed '/^Co-authored-by:[[:space:]]/d' > release-notes.md
       # A Windows editor can save a file with a UTF-8 BOM. AGP's resource
       # parser then dies with: mismatched input '﻿' expecting '<'
       # (this exact failure broke run #22). Strip BOMs before building.
@@ -76,13 +79,7 @@ jobs:
         with:
           tag_name: v${{ github.run_number }}
           name: ADBlock v${{ github.run_number }}
-          body: |
-            • اسم الملف أصبح ADBlock.apk (تثبيت مباشر بدون فك ضغط).
-            • اكتشاف تلقائي (Auto) لنطاقات الإعلان والتتبع وحجبها.
-            • إشعار دائم في الهاتف بزر تشغيل/إيقاف ومع عدّاد الإعلانات.
-            • مفتاح Toggle أنيق بدل زر التشغيل، وحركات ظهور ناعمة.
-            • تصميم جديد بالكامل: خلفية كريمية، بانر أسود، بطاقات بيضاء، ودرع ذهبي يبقى ظاهراً دائماً.
-            • زر «تحقق من التحديثات» للتطبيق بدل تحديث القائمة.
+          body_path: release-notes.md
           files: dist/ADBlock.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

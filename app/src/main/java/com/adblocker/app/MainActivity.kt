@@ -1,8 +1,6 @@
 package com.adblocker.app
 
 import android.Manifest
-import android.animation.ObjectAnimator
-import android.animation.ValueAnimator
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -38,13 +36,11 @@ class MainActivity : AppCompatActivity() {
     private var animating = false
     private var suppressSwitch = false
     private var enableRequestedAt = 0L
-    private var pulse: ObjectAnimator? = null
 
     private lateinit var statusText: TextView
     private lateinit var statusSub: TextView
     private lateinit var themeButton: ImageButton
     private lateinit var protectionSwitch: MaterialSwitch
-    private lateinit var glow: View
     private lateinit var motion: ShieldMotionView
     private lateinit var counterValue: TextView
     private lateinit var protectionLabel: TextView
@@ -65,7 +61,6 @@ class MainActivity : AppCompatActivity() {
         statusSub = findViewById(R.id.statusSub)
         themeButton = findViewById(R.id.themeButton)
         protectionSwitch = findViewById(R.id.protectionSwitch)
-        glow = findViewById(R.id.glow)
         motion = findViewById(R.id.motion)
         counterValue = findViewById(R.id.counterValue)
         protectionLabel = findViewById(R.id.protectionLabel)
@@ -77,13 +72,11 @@ class MainActivity : AppCompatActivity() {
         updateButton = findViewById(R.id.updateButton)
         progress = findViewById(R.id.progress)
 
-        // Explicit fixed palette: the shield never turns into a bare glow.
+        // Keep the shield palette independent of the system theme.
         motion.color = ContextCompat.getColor(this, R.color.gold)
-        motion.offColor = ContextCompat.getColor(this, R.color.shield_off)
 
         isOn = getSharedPreferences("adblocker", MODE_PRIVATE).getBoolean("enabled", false)
         motion.setRestingState(isOn)
-        setGlow(isOn)
         refreshUi()
         animateIn()
 
@@ -197,38 +190,14 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
 
-    private fun setGlow(active: Boolean) {
-        pulse?.cancel()
-        pulse = null
-        if (active) {
-            glow.animate().cancel()
-            glow.alpha = 0.18f
-            pulse = ObjectAnimator.ofFloat(glow, "alpha", 0.18f, 0.60f).apply {
-                duration = 1600
-                repeatCount = ValueAnimator.INFINITE
-                repeatMode = ValueAnimator.REVERSE
-                start()
-            }
-        } else {
-            ObjectAnimator.ofFloat(glow, "alpha", glow.alpha, 0f).apply {
-                duration = 280
-                start()
-            }
-        }
-    }
-
     private fun runMotionAndToggle(enable: Boolean) {
         animating = true
         protectionSwitch.isEnabled = false
-        setGlow(false)
         motion.visibility = View.VISIBLE
         motion.play(enable) {
             protectionSwitch.isEnabled = true
             animating = false
-            // Keep the full shield visible at rest - only the glow used to remain.
-            // Use the real state: the user may have denied the VPN permission.
             motion.setRestingState(isOn)
-            setGlow(isOn)
             refreshUi()
         }
         onToggle(enable)
@@ -241,7 +210,7 @@ class MainActivity : AppCompatActivity() {
     private fun onToggle(enable: Boolean) {
         if (enable) {
             // Optimistic UI: keep the switch on while the system dialog shows.
-            setEnabled(true, animateGlow = false)
+            setEnabled(true)
             if (rootMode) {
                 showProgress(true)
                 Thread {
@@ -259,7 +228,7 @@ class MainActivity : AppCompatActivity() {
                 if (intent != null) startActivityForResult(intent, 100) else startVpn()
             }
         } else {
-            setEnabled(false, animateGlow = false)
+            setEnabled(false)
             if (rootMode) {
                 showProgress(true)
                 Thread {
@@ -293,14 +262,13 @@ class MainActivity : AppCompatActivity() {
         startService(i)
     }
 
-    private fun setEnabled(value: Boolean, animateGlow: Boolean = true) {
+    private fun setEnabled(value: Boolean) {
         if (value) enableRequestedAt = System.currentTimeMillis()
         isOn = value
         getSharedPreferences("adblocker", MODE_PRIVATE).edit()
             .putBoolean("enabled", value)
             .putBoolean("auto_start", value)
             .apply()
-        if (animateGlow) setGlow(value)
         suppressSwitch = true
         protectionSwitch.isChecked = value
         suppressSwitch = false
@@ -500,6 +468,5 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacksAndMessages(null)
-        pulse?.cancel()
     }
 }
